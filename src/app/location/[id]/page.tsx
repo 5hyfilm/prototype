@@ -1,6 +1,4 @@
 // src/app/location/[id]/page.tsx
-// แก้ไขเพื่อแสดงรีวิวแบบเขียนทันทีโดยไม่ต้องมีแท็บ
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,6 +8,8 @@ import { accessibleLocations } from "@/data/locations";
 import { getReviewsByLocationId, getAverageRating } from "@/data/reviews";
 import { ReviewList } from "@/components/ReviewList";
 import { useLanguage } from "../../../../contexts/LanguageContext";
+// 👇 Import Component
+import { PlaceImageGallery } from "@/components/PlaceImageGallery";
 
 export default function LocationDetailPage() {
   const params = useParams();
@@ -30,9 +30,7 @@ export default function LocationDetailPage() {
       );
       setLocation(foundLocation);
 
-      // Get reviews and average rating
       const reviews = getReviewsByLocationId(locationId);
-      // กรองรีวิวที่มีข้อความเท่านั้น
       const writtenReviews = reviews.filter(
         (review) => review.comment && review.comment.trim().length > 0
       );
@@ -64,19 +62,15 @@ export default function LocationDetailPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="font-medium">{location.name}</h1>
+            <h1 className="font-medium line-clamp-1">{location.name}</h1>
           </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Cover Image */}
-        <div className="aspect-video bg-gray-200 rounded-lg mb-6 overflow-hidden">
-          <img
-            src="/api/placeholder/800/400"
-            alt={location.name}
-            className="w-full h-full object-cover"
-          />
+        {/* 👇 ส่วนแสดง Gallery: ส่ง Array ว่าง [] เพื่อให้แสดงกรอบ Placeholder */}
+        <div className="mb-6">
+          <PlaceImageGallery images={[]} />
         </div>
 
         {/* Location Info */}
@@ -87,7 +81,6 @@ export default function LocationDetailPage() {
             <span>{location.category}</span>
           </div>
 
-          {/* Rating */}
           <div className="flex items-center gap-1 mt-2">
             <Star className="text-yellow-400 fill-yellow-400" size={18} />
             <span className="font-medium">{averageRating.toFixed(1)}</span>
@@ -96,7 +89,6 @@ export default function LocationDetailPage() {
             </span>
           </div>
 
-          {/* Features Tags */}
           <div className="flex flex-wrap gap-2 mt-4">
             {location.features.map((feature, index) => (
               <span
@@ -108,36 +100,44 @@ export default function LocationDetailPage() {
             ))}
           </div>
 
-          {/* Description */}
           <p className="mt-4 text-gray-700">{location.description}</p>
         </div>
 
-        {/* Location Information */}
+        {/* Location Details */}
         <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
           <h3 className="font-medium text-lg mb-4">
             {t("location.about") || "เกี่ยวกับสถานที่"}
           </h3>
-          <p className="text-gray-700">{location.description}</p>
+          <p className="text-gray-700 mb-4">{location.description}</p>
 
-          {/* ข้อมูลอื่นๆ ที่เกี่ยวข้อง เช่น ที่อยู่ เบอร์โทร เวลาทำการ ฯลฯ */}
-          <div className="mt-4 pt-4 border-t">
+          <div className="pt-4 border-t border-gray-100">
             <h4 className="font-medium mb-2">
               {t("location.contact") || "ข้อมูลติดต่อ"}
             </h4>
-            <p className="text-gray-700">
-              {/* สมมติข้อมูล */}
-              {t("location.phone") || "โทรศัพท์"}: 02-XXX-XXXX
-            </p>
-            <p className="text-gray-700">
-              {t("location.website") || "เว็บไซต์"}: www.example.com
-            </p>
-            <p className="text-gray-700">
-              {t("location.hours") || "เวลาเปิด-ปิด"}: 10:00 - 22:00
-            </p>
+            <div className="space-y-2 text-sm text-gray-600">
+              <p>
+                <span className="font-medium text-gray-900">
+                  {t("location.phone") || "โทรศัพท์"}:
+                </span>{" "}
+                02-XXX-XXXX
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">
+                  {t("location.website") || "เว็บไซต์"}:
+                </span>{" "}
+                www.example.com
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">
+                  {t("location.hours") || "เวลาเปิด-ปิด"}:
+                </span>{" "}
+                10:00 - 22:00
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Reviews Section - แสดงเลยโดยไม่ต้องมีแท็บ */}
+        {/* Reviews Section */}
         <div className="mb-6">
           <h3 className="font-medium text-lg mb-4">
             {t("reviews.written.title") || "รีวิวแบบข้อความ"} ({reviewCount})
