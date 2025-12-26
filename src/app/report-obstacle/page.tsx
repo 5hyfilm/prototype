@@ -2,14 +2,26 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Camera, ChevronLeft, X, MapPin, Crosshair, Send } from "lucide-react";
+import {
+  Camera,
+  ChevronLeft,
+  X,
+  MapPin,
+  Crosshair,
+  Send,
+  Save,
+  AlertCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ObstacleCategory, ObstacleType } from "@/lib/types/obstacle";
 import { OBSTACLE_CATEGORIES } from "@/lib/types/obstacle";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import dynamic from "next/dynamic";
 
-// ใช้ dynamic import เพื่อให้ MapPicker ทำงานเฉพาะฝั่ง client
+// DRAFT STORAGE KEY
+const DRAFT_KEY = "obstacle_report_draft";
+
+// Dynamic Imports
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
   loading: () => (
@@ -19,7 +31,6 @@ const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ),
 });
 
-// ใช้ dynamic import สำหรับ SimpleLocationMap component
 const SimpleLocationMap = dynamic(
   () => import("../../components/SimpleLocationMap"),
   {
@@ -47,7 +58,13 @@ export default function ReportObstaclePage() {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ฟังก์ชันตรวจสอบว่าฟอร์มสามารถส่งได้หรือไม่
+  // State สำหรับ Feedback การบันทึก Draft
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">(
+    "idle"
+  );
+  const [showDraftNotice, setShowDraftNotice] = useState(false);
+
+  // ตรวจสอบความถูกต้องของฟอร์ม
   const isFormValid = useMemo(() => {
     return (
       formData.category !== "" &&
@@ -58,17 +75,56 @@ export default function ReportObstaclePage() {
     );
   }, [formData]);
 
-  // Effect to auto-set type to 'other' when category is 'other_obstacles'
+  // --- Logic: Load Draft on Mount ---
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const parsedDraft = JSON.parse(savedDraft);
+        // เช็คว่ามีข้อมูลที่มีประโยชน์ไหม
+        if (
+          parsedDraft.category ||
+          parsedDraft.description ||
+          parsedDraft.location[0] !== 0
+        ) {
+          setFormData(parsedDraft);
+          setShowDraftNotice(true);
+          // ซ่อนแจ้งเตือนหลังจาก 3 วินาที
+          setTimeout(() => setShowDraftNotice(false), 3000);
+        }
+      } catch (e) {
+        console.error("Error parsing draft", e);
+      }
+    } else {
+      // ถ้าไม่มี Draft ให้หา Location ปัจจุบัน (เฉพาะตอนเปิดครั้งแรกแบบไม่มี Draft)
+      getCurrentLocation();
+    }
+  }, []); // Run once
+
+  // --- Logic: Auto-Save Draft ---
+  useEffect(() => {
+    // ป้องกันการ save ตอนโหลดครั้งแรกที่ค่าอาจจะเป็น empty
+    const timer = setTimeout(() => {
+      if (
+        formData.category ||
+        formData.description ||
+        formData.location[0] !== 0
+      ) {
+        setDraftStatus("saving");
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+        setTimeout(() => setDraftStatus("saved"), 500);
+      }
+    }, 1000); // Debounce 1 วินาที
+
+    return () => clearTimeout(timer);
+  }, [formData]);
+
+  // Effect: Auto-set type 'other' for 'other_obstacles' category
   useEffect(() => {
     if (formData.category === "other_obstacles") {
       setFormData((prev) => ({ ...prev, type: "other" as ObstacleType }));
     }
   }, [formData.category]);
-
-  // Get current location on component mount
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
 
   const getCurrentLocation = () => {
     setIsGettingLocation(true);
@@ -113,11 +169,20 @@ export default function ReportObstaclePage() {
         URL.createObjectURL(file)
       );
       setSelectedImages([...selectedImages, ...newImages]);
+      // Note: รูปภาพจะไม่ถูก save ลง draft ใน localStorage เนื่องจากข้อจำกัดขนาด
+      // ในระบบจริงควร upload ขึ้น server ชั่วคราว หรือใช้ IndexedDB
     }
   };
 
   const removeImage = (index: number) => {
     setSelectedImages(selectedImages.filter((_, i) => i !== index));
+  };
+
+  // Manual Save Draft Function
+  const handleSaveDraft = () => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+    setDraftStatus("saved");
+    alert(t("common.draft_saved") || "บันทึกแบบร่างเรียบร้อยแล้ว");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +196,10 @@ export default function ReportObstaclePage() {
       console.log("Form submitted:", { ...formData, images: selectedImages });
       // จำลองการรอเวลาเพื่อส่งข้อมูล
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // ✅ Clear Draft เมื่อส่งสำเร็จ
+      localStorage.removeItem(DRAFT_KEY);
+
       router.back();
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -139,7 +208,6 @@ export default function ReportObstaclePage() {
     }
   };
 
-  // ฟังก์ชันสำหรับการแสดงผลหมวดหมู่พร้อมไอคอนใน select
   const renderCategoryOption = (
     value: string,
     data: { icon: string; label: string }
@@ -154,7 +222,7 @@ export default function ReportObstaclePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 text-gray-600">
-      {/* Header - ปรับให้มีปุ่ม Submit อยู่มุมขวา */}
+      {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4">
           <div className="h-16 flex items-center justify-between">
@@ -165,30 +233,69 @@ export default function ReportObstaclePage() {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <h1 className="font-medium">{t("obstacle.report.title")}</h1>
+              <div>
+                <h1 className="font-medium">{t("obstacle.report.title")}</h1>
+                {/* Draft Status Indicator */}
+                <div className="text-xs text-gray-400 flex items-center gap-1">
+                  {draftStatus === "saving" && <span>กำลังบันทึกร่าง...</span>}
+                  {draftStatus === "saved" && <span>บันทึกร่างแล้ว</span>}
+                </div>
+              </div>
             </div>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !isFormValid}
-              className={`px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 ${
-                submitting || !isFormValid ? "opacity-50" : ""
-              }`}
-            >
-              {submitting ? (
-                <>
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-opacity-50 border-t-white rounded-full"></span>
-                  {t("common.saving") || "กำลังส่ง..."}
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  {t("obstacle.report.submit") || "ส่งรายงาน"}
-                </>
-              )}
-            </button>
+
+            <div className="flex items-center gap-2">
+              {/* Save Draft Button */}
+              <button
+                onClick={handleSaveDraft}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"
+                title={t("common.save_draft") || "บันทึกร่าง"}
+              >
+                <Save size={20} />
+              </button>
+
+              {/* Submit Button */}
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !isFormValid}
+                className={`px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 transition-all ${
+                  submitting || !isFormValid
+                    ? "opacity-50"
+                    : "hover:bg-blue-700"
+                }`}
+              >
+                {submitting ? (
+                  <>
+                    <span className="animate-spin h-4 w-4 border-2 border-white border-opacity-50 border-t-white rounded-full"></span>
+                    <span className="hidden sm:inline">
+                      {t("common.saving") || "กำลังส่ง..."}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span className="hidden sm:inline">
+                      {t("obstacle.report.submit") || "ส่ง"}
+                    </span>
+                    <span className="sm:hidden">
+                      {t("common.send") || "ส่ง"}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Notification when draft loaded */}
+      {showDraftNotice && (
+        <div className="max-w-2xl mx-auto px-4 mt-4">
+          <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in-down">
+            <AlertCircle size={16} />
+            {t("common.draft_loaded") || "โหลดข้อมูลจากแบบร่างล่าสุดแล้ว"}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <form className="space-y-6">
@@ -217,7 +324,7 @@ export default function ReportObstaclePage() {
                         }))
                       }
                     />
-                    <div className="absolute bottom-2 right-2 bg-white px-3 py-1 rounded-lg shadow-md z-[400]">
+                    <div className="absolute bottom-2 right-2 bg-white px-3 py-1 rounded-lg shadow-md z-[400] text-xs font-mono">
                       {formData.location[0].toFixed(5)},{" "}
                       {formData.location[1].toFixed(5)}
                     </div>
@@ -228,7 +335,7 @@ export default function ReportObstaclePage() {
                 <button
                   type="button"
                   onClick={getCurrentLocation}
-                  className="w-full px-4 py-2 flex items-center justify-center gap-2 border rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                  className="w-full px-4 py-2 flex items-center justify-center gap-2 border rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   disabled={isGettingLocation}
                 >
                   <Crosshair size={18} className="text-white" />
@@ -241,7 +348,8 @@ export default function ReportObstaclePage() {
               </div>
 
               {locationError && (
-                <div className="text-red-500 text-sm p-2 bg-red-50 rounded-lg">
+                <div className="text-red-500 text-sm p-2 bg-red-50 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={16} />
                   {locationError}
                 </div>
               )}
@@ -250,11 +358,17 @@ export default function ReportObstaclePage() {
 
           {/* Photos Section */}
           <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b">
+            <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-medium flex items-center gap-2">
                 <Camera size={20} />
                 {t("obstacle.photos.add")}
               </h2>
+              {/* Optional: แจ้งเตือนเรื่องรูปภาพไม่ถูกเซฟ */}
+              {selectedImages.length > 0 && (
+                <span className="text-xs text-orange-500 font-normal hidden sm:inline">
+                  *รูปภาพจะไม่ถูกบันทึกในแบบร่าง
+                </span>
+              )}
             </div>
             <div className="p-4">
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -268,7 +382,7 @@ export default function ReportObstaclePage() {
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                     >
                       <X size={16} />
                     </button>
@@ -284,7 +398,7 @@ export default function ReportObstaclePage() {
                   onChange={handleImageUpload}
                   className="hidden"
                 />
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
                   <Camera className="mx-auto w-8 h-8 text-gray-400" />
                   <p className="mt-2 text-sm text-gray-600">
                     {t("obstacle.photos.click.to.add")}
@@ -314,10 +428,10 @@ export default function ReportObstaclePage() {
                       type:
                         e.target.value === "other_obstacles"
                           ? ("other" as ObstacleType)
-                          : "", // Reset type when category changes, or set to "other" for other_obstacles
+                          : "",
                     });
                   }}
-                  className="w-full p-2 border rounded-lg"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   required
                 >
                   <option value="">{t("ui.select.category")}</option>
@@ -329,7 +443,7 @@ export default function ReportObstaclePage() {
                 </select>
               </div>
 
-              {/* Type Selection - show only if category is not other_obstacles */}
+              {/* Type Selection */}
               {formData.category && formData.category !== "other_obstacles" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -343,7 +457,7 @@ export default function ReportObstaclePage() {
                         type: e.target.value as ObstacleType,
                       })
                     }
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     required
                   >
                     <option value="">{t("ui.select.type")}</option>
@@ -375,8 +489,8 @@ export default function ReportObstaclePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  className="w-full p-2 border rounded-lg"
-                  rows={formData.category === "other_obstacles" ? 6 : 4} // เพิ่มขนาดช่องกรอกถ้าเลือกหมวด "อื่นๆ"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  rows={formData.category === "other_obstacles" ? 6 : 4}
                   placeholder={t("obstacle.description.placeholder")}
                   required
                 />
@@ -388,8 +502,8 @@ export default function ReportObstaclePage() {
 
       {/* Map Picker Modal */}
       {showMapPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div className="p-4 border-b flex justify-between items-center">
               <h3 className="font-medium">
                 {t("location.select.on.map") || "เลือกตำแหน่งบนแผนที่"}
@@ -401,24 +515,24 @@ export default function ReportObstaclePage() {
                 <X size={20} />
               </button>
             </div>
-            <div className="h-96 w-full">
+            <div className="h-96 w-full relative">
               <MapPicker
                 initialPosition={formData.location}
                 onSelectPosition={handleLocationSelect}
               />
             </div>
-            <div className="p-4 bg-gray-50 flex justify-between">
+            <div className="p-4 bg-gray-50 flex justify-between rounded-b-lg">
               <button
                 type="button"
                 onClick={() => setShowMapPicker(false)}
-                className="px-4 py-2 border rounded-lg"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition-colors"
               >
                 {t("common.cancel") || "ยกเลิก"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowMapPicker(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {t("common.confirm") || "ยืนยัน"}
               </button>
