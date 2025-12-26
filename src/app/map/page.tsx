@@ -9,6 +9,8 @@ import { Info } from "lucide-react";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
 import { RecordingControlModal } from "@/components/RecordingControlModal";
 import { useRouter } from "next/navigation";
+import { SponsoredSpotlight } from "@/components/SponsoredSpotlight"; // [เพิ่มใหม่] นำเข้า Component โฆษณา
+import { sponsoredLocations } from "@/data/sponsored"; // [เพิ่มใหม่] นำเข้าข้อมูลโฆษณา
 
 const Map = dynamic(() => import("@/components/Map").then((mod) => mod.Map), {
   ssr: false,
@@ -20,6 +22,10 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchNotification, setShowSearchNotification] = useState(false);
 
+  // --- [เพิ่มใหม่] State สำหรับ Spotlight Advertising System ---
+  const [showSpotlight, setShowSpotlight] = useState(false);
+  const [hasShownSpotlight, setHasShownSpotlight] = useState(false);
+
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -29,6 +35,19 @@ export default function MapPage() {
   const [recordedPath, setRecordedPath] = useState<[number, number][]>([]);
   const [recordingInterval, setRecordingInterval] =
     useState<NodeJS.Timeout | null>(null);
+
+  // --- [เพิ่มใหม่] Effect สำหรับเปิด Spotlight อัตโนมัติเมื่อเข้าหน้า Map ---
+  useEffect(() => {
+    // หน่วงเวลา 1.5 วินาที เพื่อให้ผู้ใช้เห็นแผนที่ก่อน แล้วค่อยเด้งโฆษณา
+    const timer = setTimeout(() => {
+      if (!hasShownSpotlight) {
+        setShowSpotlight(true);
+        setHasShownSpotlight(true); // ป้องกันไม่ให้เด้งซ้ำในการใช้งานครั้งนี้ (Optional)
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [hasShownSpotlight]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -237,6 +256,14 @@ export default function MapPage() {
         onDiscard={discardRecording} // เพิ่ม prop onDiscard
         mode={modalMode}
       />
+
+      {/* --- [เพิ่มใหม่] Sponsored Spotlight Panel --- */}
+      <SponsoredSpotlight
+        isOpen={showSpotlight}
+        onClose={() => setShowSpotlight(false)}
+        locations={sponsoredLocations}
+      />
+      {/* ------------------------------------------- */}
 
       {/* Map Component */}
       <div className="w-full h-full">

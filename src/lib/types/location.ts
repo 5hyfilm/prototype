@@ -1,4 +1,4 @@
-//
+// src/lib/types/location.ts
 
 export interface LocationFeature {
   name: string;
@@ -60,4 +60,21 @@ export type AccessibilityFeature = (typeof ACCESSIBILITY_FEATURES)[number];
 // เพิ่มเติม interface สำหรับสถานที่พร้อมระยะทาง (ใช้สำหรับการแสดงสถานที่ใกล้เคียง)
 export interface LocationWithDistance extends Location {
   distance: number;
+}
+
+// --- ส่วนที่เพิ่มใหม่สำหรับระบบ Spotlight Advertising ---
+
+export interface Promotion {
+  title: string; // หัวข้อโปรโมชั่น เช่น "จอดรถฟรี 4 ชม."
+  description: string; // รายละเอียด เช่น "เพียงแสดงแอป GOOSEWAY"
+  promoCode?: string; // โค้ดส่วนลด (ถ้ามี)
+  validUntil: string; // วันหมดอายุโปรโมชั่น
+  bannerUrl?: string; // รูป Banner โฆษณา
+}
+
+// Interface สำหรับสถานที่ที่เป็น Sponsor (ขยายมาจาก Location เดิม)
+export interface SponsoredLocation extends Location {
+  isSponsored: boolean;
+  promotion: Promotion;
+  partnerTier: "Gold" | "Silver" | "Bronze"; // เผื่อไว้จัดอันดับการแสดงผลในอนาคต
 }
