@@ -2,7 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Star, Clock, MapPin, Image as ImageIcon } from "lucide-react"; // 👈 เพิ่ม ImageIcon
+import {
+  Star,
+  Clock,
+  MapPin,
+  Image as ImageIcon,
+  ExternalLink,
+  Ticket,
+} from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { AccessibilityFeatureItem } from "./AccessibilityFeatureItem";
 import { hasRecentData, getCategoryIcon } from "../../utils/locationUtils";
@@ -19,8 +26,6 @@ export function LocationContent({ location }: LocationContentProps) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasAnyRecentData, setHasAnyRecentData] = useState(false);
 
-  // ... (useEffect และ logic เดิมคงไว้เหมือนเดิม) ...
-  // Check if any feature has recent data when component mounts
   const accessibilityFeatures = [
     "parking",
     "entrance",
@@ -66,15 +71,15 @@ export function LocationContent({ location }: LocationContentProps) {
       "Shopping Mall": "accessibility.place.shopping.mall",
       "Public Transport": "accessibility.place.transport.hub",
       Park: "accessibility.place.park",
+      Hotel: "accessibility.place.hotel",
     };
     return t(categoryMap[category] || "accessibility.place.other");
   };
 
   return (
-    <div className="space-y-4">
-      {/* 🖼️ Location Cover Image (Placeholder Area) */}
-      {/* ตีกรอบ h-48 และใส่ bg-gray-200 เสมอ ไม่ว่าจะมีรูปหรือไม่ */}
-      <div className="relative w-full h-48 rounded-xl overflow-hidden shadow-sm mb-4 bg-gray-200 flex items-center justify-center border border-gray-100">
+    <div className="flex flex-col min-h-full space-y-4">
+      {/* 🖼️ ส่วนแสดงรูปภาพ (Placeholder) */}
+      <div className="relative w-full h-48 rounded-xl overflow-hidden shadow-sm bg-gray-200 flex items-center justify-center border border-gray-100 shrink-0">
         {location.image ? (
           <img
             src={location.image}
@@ -82,7 +87,6 @@ export function LocationContent({ location }: LocationContentProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          // ⚠️ กรณีไม่มีรูปภาพ: แสดง icon และข้อความ placeholder
           <div className="flex flex-col items-center text-gray-400">
             <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
             <span className="text-xs font-medium text-gray-500">
@@ -91,7 +95,6 @@ export function LocationContent({ location }: LocationContentProps) {
           </div>
         )}
 
-        {/* Badge ระดับการเข้าถึง (แสดงทับกรอบเสมอ) */}
         <div
           className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md backdrop-blur-sm
           ${
@@ -110,8 +113,8 @@ export function LocationContent({ location }: LocationContentProps) {
         </div>
       </div>
 
-      {/* Location Header */}
-      <div className="flex items-start justify-between">
+      {/* Header Info */}
+      <div className="flex items-start justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-50 rounded-lg text-blue-600 shrink-0">
             {getCategoryIcon(location.category)}
@@ -128,14 +131,14 @@ export function LocationContent({ location }: LocationContentProps) {
       </div>
 
       {/* Description */}
-      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 shrink-0">
         <p className="text-sm text-gray-600 leading-relaxed">
           {location.description}
         </p>
       </div>
 
-      {/* Time Filter and View Reviews Button */}
-      <div className="flex justify-between items-center pt-1 border-t border-gray-100 mt-2">
+      {/* Review & Filter Controls */}
+      <div className="flex justify-between items-center pt-1 border-t border-gray-100 mt-2 shrink-0">
         <button
           onClick={handleViewReviews}
           className="text-blue-600 text-sm flex items-center gap-1 hover:underline font-medium"
@@ -170,8 +173,8 @@ export function LocationContent({ location }: LocationContentProps) {
         </div>
       </div>
 
-      {/* Accessibility Features List */}
-      <div className="space-y-3 pt-2">
+      {/* Features List */}
+      <div className="space-y-3 pt-2 pb-4">
         {accessibilityFeatures.map((key) => (
           <AccessibilityFeatureItem
             key={key}
@@ -182,17 +185,40 @@ export function LocationContent({ location }: LocationContentProps) {
         ))}
       </div>
 
-      {/* Write Review Button */}
-      <div className="pt-2 sticky bottom-0 bg-white pb-2 border-t border-gray-100 mt-4">
-        <button
-          onClick={handleReviewClick}
-          className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-[0.98] transition-all shadow-md shadow-blue-200"
-        >
-          <Star className="w-5 h-5 fill-current" />
-          <span className="font-semibold">
-            {t("common.write.review") || "Write a Review"}
-          </span>
-        </button>
+      {/* 🚀 Sticky Footer (ใช้ sticky แทน fixed เพื่อแก้ปัญหาปุ่มลอยกลางจอ) */}
+      <div className="sticky bottom-0 -mx-4 -mb-4 px-4 py-4 bg-white/95 backdrop-blur-md border-t border-gray-100 mt-auto z-50">
+        <div className="flex gap-3">
+          {/* Review Button */}
+          <button
+            onClick={handleReviewClick}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all active:scale-[0.98] shadow-sm
+                  ${
+                    location.bookingLink
+                      ? "bg-white border-2 border-gray-100 text-gray-700 hover:bg-gray-50"
+                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200"
+                  }`}
+          >
+            <Star
+              className={`w-5 h-5 ${
+                location.bookingLink ? "fill-gray-700" : "fill-white"
+              }`}
+            />
+            <span>{t("common.review") || "Review"}</span>
+          </button>
+
+          {/* Booking Button (Affiliate) */}
+          {location.bookingLink && (
+            <a
+              href={location.bookingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-[1.5] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-200 active:scale-[0.98] transition-all font-bold shadow-md"
+            >
+              <Ticket className="w-5 h-5" />
+              <span>{t("location.book.now") || "Book Now"}</span>
+            </a>
+          )}
+        </div>
       </div>
 
       <ReviewModal

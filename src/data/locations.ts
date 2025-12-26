@@ -6,6 +6,8 @@ export const accessibleLocations: Location[] = [
   {
     id: 1,
     name: "EmQuartier",
+    bookingLink:
+      "https://www.agoda.com/partners/partnersearch.aspx?cid=1844104&pcs=1&city=9395",
     position: [13.7305, 100.5697],
     category: "Shopping Mall",
     accessibility: "high",
