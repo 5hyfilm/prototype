@@ -1,7 +1,7 @@
-// Path: src/app/report-obstacle/page.tsx
+// src/app/report-obstacle/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react"; // เพิ่ม Suspense
 import {
   Camera,
   ChevronLeft,
@@ -11,17 +11,28 @@ import {
   Send,
   Save,
   AlertCircle,
+  FileText, // เพิ่ม icon
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation"; // เพิ่ม useSearchParams
 import type { ObstacleCategory, ObstacleType } from "@/lib/types/obstacle";
 import { OBSTACLE_CATEGORIES } from "@/lib/types/obstacle";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import dynamic from "next/dynamic";
 
-// DRAFT STORAGE KEY
-const DRAFT_KEY = "obstacle_report_draft";
+// เปลี่ยน Key เป็น drafts (plural)
+const DRAFTS_KEY = "obstacle_report_drafts";
 
-// Dynamic Imports
+// Interface สำหรับ Draft
+interface DraftItem {
+  id: string;
+  category: ObstacleCategory | "";
+  type: ObstacleType | "";
+  description: string;
+  location: [number, number];
+  updatedAt: number;
+}
+
+// Dynamic Imports (คงเดิม)
 const MapPicker = dynamic(() => import("../../components/MapPicker"), {
   ssr: false,
   loading: () => (
@@ -43,9 +54,14 @@ const SimpleLocationMap = dynamic(
   }
 );
 
-export default function ReportObstaclePage() {
+// สร้าง Component เนื้อหาหลักแยกออกมาเพื่อห่อด้วย Suspense
+function ReportObstacleContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, language } = useLanguage();
+
+  // State
+  const [draftId, setDraftId] = useState<string | null>(null); // เก็บ ID ของ Draft ปัจจุบัน
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     category: "" as ObstacleCategory | "",
@@ -53,18 +69,15 @@ export default function ReportObstaclePage() {
     description: "",
     location: [0, 0] as [number, number],
   });
+
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // State สำหรับ Feedback การบันทึก Draft
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">(
     "idle"
   );
-  const [showDraftNotice, setShowDraftNotice] = useState(false);
 
-  // ตรวจสอบความถูกต้องของฟอร์ม
   const isFormValid = useMemo(() => {
     return (
       formData.category !== "" &&
@@ -75,56 +88,117 @@ export default function ReportObstaclePage() {
     );
   }, [formData]);
 
-  // --- Logic: Load Draft on Mount ---
+  // --- 1. Load Draft Logic (ทำงานเมื่อมี ?id=...) ---
   useEffect(() => {
-    const savedDraft = localStorage.getItem(DRAFT_KEY);
-    if (savedDraft) {
-      try {
-        const parsedDraft = JSON.parse(savedDraft);
-        // เช็คว่ามีข้อมูลที่มีประโยชน์ไหม
-        if (
-          parsedDraft.category ||
-          parsedDraft.description ||
-          parsedDraft.location[0] !== 0
-        ) {
-          setFormData(parsedDraft);
-          setShowDraftNotice(true);
-          // ซ่อนแจ้งเตือนหลังจาก 3 วินาที
-          setTimeout(() => setShowDraftNotice(false), 3000);
+    const idFromUrl = searchParams.get("id");
+
+    if (idFromUrl) {
+      // โหลด Draft เฉพาะที่มี ID ตรงกัน
+      const allDrafts = localStorage.getItem(DRAFTS_KEY);
+      if (allDrafts) {
+        const parsedDrafts = JSON.parse(allDrafts) as DraftItem[];
+        const targetDraft = parsedDrafts.find((d) => d.id === idFromUrl);
+
+        if (targetDraft) {
+          setDraftId(targetDraft.id);
+          setFormData({
+            category: targetDraft.category,
+            type: targetDraft.type,
+            description: targetDraft.description,
+            location: targetDraft.location,
+          });
+          console.log("Loaded draft:", targetDraft.id);
+        } else {
+          // ถ้าไม่เจอ ID (อาจถูกลบไปแล้ว) ให้เคลียร์ URL
+          router.replace("/report-obstacle");
         }
-      } catch (e) {
-        console.error("Error parsing draft", e);
       }
     } else {
-      // ถ้าไม่มี Draft ให้หา Location ปัจจุบัน (เฉพาะตอนเปิดครั้งแรกแบบไม่มี Draft)
-      getCurrentLocation();
-    }
-  }, []); // Run once
-
-  // --- Logic: Auto-Save Draft ---
-  useEffect(() => {
-    // ป้องกันการ save ตอนโหลดครั้งแรกที่ค่าอาจจะเป็น empty
-    const timer = setTimeout(() => {
-      if (
-        formData.category ||
-        formData.description ||
-        formData.location[0] !== 0
-      ) {
-        setDraftStatus("saving");
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
-        setTimeout(() => setDraftStatus("saved"), 500);
+      // ถ้าไม่มี ID ให้หาตำแหน่งปัจจุบัน (เคสสร้างใหม่)
+      if (formData.location[0] === 0) {
+        getCurrentLocation();
       }
-    }, 1000); // Debounce 1 วินาที
+    }
+  }, [searchParams]);
+
+  // --- 2. Auto-Save Logic (Optional: Save to Array if Draft ID exists) ---
+  // SRS เน้น "จัดการ Draft" ซึ่งมักหมายถึงการกด Save เอง หรือ Auto-save ลง ID เดิม
+  // เพื่อความปลอดภัยของข้อมูล เราจะ Auto-save ก็ต่อเมื่อ "มี ID แล้ว" (เคยกด Save มาก่อน)
+  useEffect(() => {
+    if (!draftId) return; // ถ้ายังไม่เคย Save เป็น Draft จะไม่ Auto-save ลง Storage (ป้องกันขยะ)
+
+    const timer = setTimeout(() => {
+      saveDraftToStorage(draftId);
+    }, 1500); // Debounce
 
     return () => clearTimeout(timer);
-  }, [formData]);
+  }, [formData, draftId]);
 
-  // Effect: Auto-set type 'other' for 'other_obstacles' category
-  useEffect(() => {
-    if (formData.category === "other_obstacles") {
-      setFormData((prev) => ({ ...prev, type: "other" as ObstacleType }));
+  // ฟังก์ชันบันทึกลง LocalStorage (Array)
+  const saveDraftToStorage = (id: string) => {
+    setDraftStatus("saving");
+    try {
+      const allDraftsStr = localStorage.getItem(DRAFTS_KEY);
+      let allDrafts: DraftItem[] = allDraftsStr ? JSON.parse(allDraftsStr) : [];
+
+      const draftData: DraftItem = {
+        id: id,
+        ...formData,
+        updatedAt: Date.now(),
+      };
+
+      // หา Index เดิม
+      const index = allDrafts.findIndex((d) => d.id === id);
+      if (index >= 0) {
+        allDrafts[index] = draftData; // Update
+      } else {
+        allDrafts.push(draftData); // Insert (เผื่อเคสแปลกๆ)
+      }
+
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(allDrafts));
+      setDraftStatus("saved");
+
+      // Reset status after 2s
+      setTimeout(() => setDraftStatus("idle"), 2000);
+    } catch (e) {
+      console.error("Save draft error", e);
+      setDraftStatus("idle");
     }
-  }, [formData.category]);
+  };
+
+  // --- 3. Manual Save Draft Button ---
+  const handleSaveDraft = () => {
+    // ถ้ามี ID อยู่แล้ว ให้ใช้ ID เดิม
+    // ถ้ายังไม่มี ให้สร้าง ID ใหม่ (UUID)
+    let targetId = draftId;
+
+    if (!targetId) {
+      targetId = crypto.randomUUID(); // สร้าง ID ใหม่
+      setDraftId(targetId);
+
+      // เพิ่มลง Array ครั้งแรก
+      const allDraftsStr = localStorage.getItem(DRAFTS_KEY);
+      let allDrafts: DraftItem[] = allDraftsStr ? JSON.parse(allDraftsStr) : [];
+
+      const newDraft: DraftItem = {
+        id: targetId,
+        ...formData,
+        updatedAt: Date.now(),
+      };
+
+      allDrafts.push(newDraft);
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(allDrafts));
+
+      // Update URL โดยไม่ Reload
+      window.history.replaceState(null, "", `/report-obstacle?id=${targetId}`);
+    } else {
+      // ถ้ามี ID แล้ว ก็แค่ Force Save
+      saveDraftToStorage(targetId);
+    }
+
+    setDraftStatus("saved");
+    alert(t("common.draft_saved") || "บันทึกแบบร่างเรียบร้อยแล้ว");
+  };
 
   const getCurrentLocation = () => {
     setIsGettingLocation(true);
@@ -142,21 +216,46 @@ export default function ReportObstaclePage() {
         (error) => {
           console.error("Error getting location:", error);
           setLocationError(
-            t("location.error.message") ||
-              "ไม่สามารถรับตำแหน่งปัจจุบันได้ กรุณาลองใหม่อีกครั้ง"
+            t("location.error.message") || "ไม่สามารถรับตำแหน่งปัจจุบันได้"
           );
           setIsGettingLocation(false);
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     } else {
-      setLocationError(
-        t("location.not.supported") || "เบราว์เซอร์ของคุณไม่รองรับการรับตำแหน่ง"
-      );
+      setLocationError(t("location.not.supported") || "ไม่รองรับ GPS");
       setIsGettingLocation(false);
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+    setSubmitting(true);
+
+    try {
+      console.log("Form submitted:", { ...formData, images: selectedImages });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // ✅ ลบ Draft ออกจาก Array เมื่อส่งสำเร็จ
+      if (draftId) {
+        const allDraftsStr = localStorage.getItem(DRAFTS_KEY);
+        if (allDraftsStr) {
+          const allDrafts = JSON.parse(allDraftsStr) as DraftItem[];
+          const newDrafts = allDrafts.filter((d) => d.id !== draftId);
+          localStorage.setItem(DRAFTS_KEY, JSON.stringify(newDrafts));
+        }
+      }
+
+      router.back();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Helper functions (คงเดิม)
   const handleLocationSelect = (position: [number, number]) => {
     setFormData((prev) => ({ ...prev, location: position }));
     setShowMapPicker(false);
@@ -169,8 +268,6 @@ export default function ReportObstaclePage() {
         URL.createObjectURL(file)
       );
       setSelectedImages([...selectedImages, ...newImages]);
-      // Note: รูปภาพจะไม่ถูก save ลง draft ใน localStorage เนื่องจากข้อจำกัดขนาด
-      // ในระบบจริงควร upload ขึ้น server ชั่วคราว หรือใช้ IndexedDB
     }
   };
 
@@ -178,35 +275,12 @@ export default function ReportObstaclePage() {
     setSelectedImages(selectedImages.filter((_, i) => i !== index));
   };
 
-  // Manual Save Draft Function
-  const handleSaveDraft = () => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
-    setDraftStatus("saved");
-    alert(t("common.draft_saved") || "บันทึกแบบร่างเรียบร้อยแล้ว");
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isFormValid) return;
-
-    setSubmitting(true);
-
-    try {
-      console.log("Form submitted:", { ...formData, images: selectedImages });
-      // จำลองการรอเวลาเพื่อส่งข้อมูล
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // ✅ Clear Draft เมื่อส่งสำเร็จ
-      localStorage.removeItem(DRAFT_KEY);
-
-      router.back();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    } finally {
-      setSubmitting(false);
+  // Auto-set type 'other' (คงเดิม)
+  useEffect(() => {
+    if (formData.category === "other_obstacles") {
+      setFormData((prev) => ({ ...prev, type: "other" as ObstacleType }));
     }
-  };
+  }, [formData.category]);
 
   const renderCategoryOption = (
     value: string,
@@ -235,25 +309,40 @@ export default function ReportObstaclePage() {
               </button>
               <div>
                 <h1 className="font-medium">{t("obstacle.report.title")}</h1>
-                {/* Draft Status Indicator */}
                 <div className="text-xs text-gray-400 flex items-center gap-1">
-                  {draftStatus === "saving" && <span>กำลังบันทึกร่าง...</span>}
-                  {draftStatus === "saved" && <span>บันทึกร่างแล้ว</span>}
+                  {draftStatus === "saving" && (
+                    <span>{t("common.saving") || "กำลังบันทึก..."}</span>
+                  )}
+                  {draftStatus === "saved" && (
+                    <span>{t("common.saved") || "บันทึกแล้ว"}</span>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Save Draft Button */}
+              {/* ปุ่ม View Drafts */}
+              <button
+                onClick={() => router.push("/drafts")}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-full hidden sm:block"
+                title={t("drafts.view") || "ดูแบบร่างทั้งหมด"}
+              >
+                <FileText size={20} />
+              </button>
+
+              {/* ปุ่ม Save Draft */}
               <button
                 onClick={handleSaveDraft}
                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"
                 title={t("common.save_draft") || "บันทึกร่าง"}
               >
-                <Save size={20} />
+                <Save
+                  size={20}
+                  className={draftStatus === "saved" ? "text-green-500" : ""}
+                />
               </button>
 
-              {/* Submit Button */}
+              {/* ปุ่ม Submit */}
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !isFormValid}
@@ -264,42 +353,22 @@ export default function ReportObstaclePage() {
                 }`}
               >
                 {submitting ? (
-                  <>
-                    <span className="animate-spin h-4 w-4 border-2 border-white border-opacity-50 border-t-white rounded-full"></span>
-                    <span className="hidden sm:inline">
-                      {t("common.saving") || "กำลังส่ง..."}
-                    </span>
-                  </>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                 ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    <span className="hidden sm:inline">
-                      {t("obstacle.report.submit") || "ส่ง"}
-                    </span>
-                    <span className="sm:hidden">
-                      {t("common.send") || "ส่ง"}
-                    </span>
-                  </>
+                  <Send className="w-4 h-4" />
                 )}
+                <span className="hidden sm:inline">
+                  {t("obstacle.report.submit") || "ส่ง"}
+                </span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Notification when draft loaded */}
-      {showDraftNotice && (
-        <div className="max-w-2xl mx-auto px-4 mt-4">
-          <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in-down">
-            <AlertCircle size={16} />
-            {t("common.draft_loaded") || "โหลดข้อมูลจากแบบร่างล่าสุดแล้ว"}
-          </div>
-        </div>
-      )}
-
       <div className="max-w-2xl mx-auto px-4 py-6">
         <form className="space-y-6">
-          {/* Location Section */}
+          {/* ส่วนแผนที่ (คงเดิม) */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
               <h2 className="font-medium flex items-center gap-2">
@@ -311,10 +380,7 @@ export default function ReportObstaclePage() {
               {formData.location[0] !== 0 &&
                 formData.location[1] !== 0 &&
                 !showMapPicker && (
-                  <div
-                    id="location-map"
-                    className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative"
-                  >
+                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
                     <SimpleLocationMap
                       position={formData.location}
                       onPositionChange={(newPosition) =>
@@ -345,6 +411,14 @@ export default function ReportObstaclePage() {
                       : t("location.use.current") || "ใช้ตำแหน่งปัจจุบัน"}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMapPicker(true)}
+                  className="w-full px-4 py-2 flex items-center justify-center gap-2 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <MapPin size={18} />
+                  <span>{t("location.select.on.map") || "เลือกบนแผนที่"}</span>
+                </button>
               </div>
 
               {locationError && (
@@ -356,19 +430,13 @@ export default function ReportObstaclePage() {
             </div>
           </div>
 
-          {/* Photos Section */}
+          {/* ส่วนรูปภาพ (คงเดิม) */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-medium flex items-center gap-2">
                 <Camera size={20} />
                 {t("obstacle.photos.add")}
               </h2>
-              {/* Optional: แจ้งเตือนเรื่องรูปภาพไม่ถูกเซฟ */}
-              {selectedImages.length > 0 && (
-                <span className="text-xs text-orange-500 font-normal hidden sm:inline">
-                  *รูปภาพจะไม่ถูกบันทึกในแบบร่าง
-                </span>
-              )}
             </div>
             <div className="p-4">
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -376,20 +444,19 @@ export default function ReportObstaclePage() {
                   <div key={index} className="relative aspect-square">
                     <img
                       src={image}
-                      alt={t("obstacle.photo.selected") + ` ${index + 1}`}
+                      alt={`Selected ${index}`}
                       className="w-full h-full object-cover rounded-lg"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
                     >
                       <X size={16} />
                     </button>
                   </div>
                 ))}
               </div>
-
               <label className="block">
                 <input
                   type="file"
@@ -408,13 +475,12 @@ export default function ReportObstaclePage() {
             </div>
           </div>
 
-          {/* Obstacle Details */}
+          {/* ส่วนรายละเอียด (คงเดิม) */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
               <h2 className="font-medium">{t("obstacle.report.details")}</h2>
             </div>
             <div className="p-4 space-y-4">
-              {/* Category Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("obstacle.report.category")}
@@ -431,7 +497,7 @@ export default function ReportObstaclePage() {
                           : "",
                     });
                   }}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   required
                 >
                   <option value="">{t("ui.select.category")}</option>
@@ -443,7 +509,6 @@ export default function ReportObstaclePage() {
                 </select>
               </div>
 
-              {/* Type Selection */}
               {formData.category && formData.category !== "other_obstacles" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -457,7 +522,7 @@ export default function ReportObstaclePage() {
                         type: e.target.value as ObstacleType,
                       })
                     }
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     required
                   >
                     <option value="">{t("ui.select.type")}</option>
@@ -465,15 +530,7 @@ export default function ReportObstaclePage() {
                       formData.category as ObstacleCategory
                     ].types.map(({ value, label }) => (
                       <option key={value} value={value}>
-                        {language === "th"
-                          ? label
-                          : value
-                              .split("_")
-                              .map(
-                                (word) =>
-                                  word.charAt(0).toUpperCase() + word.slice(1)
-                              )
-                              .join(" ")}
+                        {language === "th" ? label : value}
                       </option>
                     ))}
                   </select>
@@ -489,8 +546,8 @@ export default function ReportObstaclePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  rows={formData.category === "other_obstacles" ? 6 : 4}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  rows={4}
                   placeholder={t("obstacle.description.placeholder")}
                   required
                 />
@@ -500,14 +557,12 @@ export default function ReportObstaclePage() {
         </form>
       </div>
 
-      {/* Map Picker Modal */}
+      {/* Map Picker Modal (คงเดิม) */}
       {showMapPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-medium">
-                {t("location.select.on.map") || "เลือกตำแหน่งบนแผนที่"}
-              </h3>
+              <h3 className="font-medium">{t("location.select.on.map")}</h3>
               <button
                 onClick={() => setShowMapPicker(false)}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -525,21 +580,36 @@ export default function ReportObstaclePage() {
               <button
                 type="button"
                 onClick={() => setShowMapPicker(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition-colors"
+                className="px-4 py-2 border rounded-lg"
               >
-                {t("common.cancel") || "ยกเลิก"}
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => setShowMapPicker(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
               >
-                {t("common.confirm") || "ยืนยัน"}
+                {t("common.confirm")}
               </button>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// Main Page Component wrapped in Suspense for useSearchParams
+export default function ReportObstaclePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <ReportObstacleContent />
+    </Suspense>
   );
 }

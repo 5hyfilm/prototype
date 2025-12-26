@@ -6,9 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   Settings,
   Edit2,
-  FileText,
+  FileText, // ใช้ไอคอน FileText สื่อถึงเอกสาร/แบบร่าง
   ChevronRight,
-  Trash2, // เผื่อใช้ล้างข้อมูล (Optional)
 } from "lucide-react";
 import { WheelchairInfo } from "@/components/WheelchairInfo";
 import { RouteLibrary } from "@/components/RouteLibrary";
@@ -22,54 +21,28 @@ export default function ProfilePage() {
   // State เก็บจำนวน Draft ที่ค้างอยู่
   const [draftCount, setDraftCount] = useState(0);
 
-  // --- 🛠️ MOCK DATA GENERATOR (สำหรับทดสอบ) ---
+  // ตรวจสอบ LocalStorage เพื่อดูว่ามี Draft กี่อัน
   useEffect(() => {
-    const DRAFTS_KEY = "obstacle_report_drafts";
-    const existing = localStorage.getItem(DRAFTS_KEY);
-
-    // ถ้ายังไม่มีข้อมูลเลย ให้สร้างข้อมูลจำลองขึ้นมา 2 อัน
-    if (!existing || JSON.parse(existing).length === 0) {
-      const mockDrafts = [
-        {
-          id: "draft_demo_1",
-          category: "sidewalk",
-          type: "damaged",
-          description: "ทางเท้าแตกเป็นหลุมลึก ประมาณ 10 ซม. รถเข็นผ่านยากมาก",
-          location: [13.8055, 100.5742], // แถวลาดพร้าว
-          updatedAt: Date.now() - 1000000, // เมื่อวาน
-        },
-        {
-          id: "draft_demo_2",
-          category: "restroom",
-          type: "not_accessible",
-          description: "ห้องน้ำคนพิการประตูล็อค ไม่ทราบบุคคลที่ถือกุญแจ",
-          location: [13.7469, 100.535], // แถวสยาม
-          updatedAt: Date.now(), // เพิ่งทำตะกี้
-        },
-      ];
-      localStorage.setItem(DRAFTS_KEY, JSON.stringify(mockDrafts));
-      console.log("Mock drafts injected! 💉");
-      setDraftCount(2); // อัปเดต state ทันที
-    } else {
-      // ถ้ามีของจริงอยู่แล้ว ก็นับตามจริง
+    // ใช้ Key ใหม่ที่เป็น Array (ตามที่คุยกันในระบบจัดการ Draft)
+    const savedDrafts = localStorage.getItem("obstacle_report_drafts");
+    if (savedDrafts) {
       try {
-        const parsed = JSON.parse(existing);
+        const parsed = JSON.parse(savedDrafts);
         if (Array.isArray(parsed)) {
           setDraftCount(parsed.length);
         }
       } catch (e) {
-        console.error("Error reading drafts", e);
+        console.error("Error checking drafts", e);
       }
     }
   }, []);
-  // ----------------------------------------------
 
   const handleEditProfile = () => {
     router.push("/profile/edit");
   };
 
   const handleViewDrafts = () => {
-    router.push("/drafts");
+    router.push("/drafts"); // ลิงก์ไปหน้าจัดการ Draft รวม
   };
 
   return (
@@ -145,17 +118,17 @@ export default function ProfilePage() {
 
       {/* Main Content */}
       <div className="p-4 space-y-4">
-        {/* ✅ เมนู "แบบร่างที่บันทึกไว้" (แสดงตลอด เพื่อให้รู้ว่ามีฟีเจอร์นี้) */}
+        {/* ✅ เมนู "แบบร่างที่บันทึกไว้" (แสดงตลอด หรือเฉพาะตอนมี Draft ก็ได้ ในที่นี้แสดงตลอดเพื่อให้ User รู้ว่ามีฟีเจอร์นี้) */}
         <div
           onClick={handleViewDrafts}
-          className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between cursor-pointer border border-gray-100 hover:bg-gray-50 transition-colors active:scale-[0.98]"
+          className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between cursor-pointer border border-gray-100 hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-3">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                 draftCount > 0
                   ? "bg-orange-100 text-orange-600"
-                  : "bg-gray-100 text-gray-400"
+                  : "bg-gray-100 text-gray-500"
               }`}
             >
               <FileText size={20} />
@@ -164,13 +137,7 @@ export default function ProfilePage() {
               <h3 className="font-medium text-gray-900 text-sm">
                 {t("drafts.title") || "แบบร่างที่บันทึกไว้"}
               </h3>
-              <p
-                className={`text-xs mt-0.5 ${
-                  draftCount > 0
-                    ? "text-orange-600 font-medium"
-                    : "text-gray-400"
-                }`}
-              >
+              <p className="text-xs text-gray-500 mt-0.5">
                 {draftCount > 0
                   ? `คุณมีรายการค้างอยู่ ${draftCount} รายการ`
                   : "ไม่มีรายการค้าง"}
@@ -178,9 +145,8 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Badge แจ้งเตือนจำนวน (สีแดง) */}
             {draftCount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center shadow-sm animate-pulse">
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                 {draftCount}
               </span>
             )}
