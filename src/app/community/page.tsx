@@ -3,7 +3,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, MapPin, Users, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Plus,
+  MapPin,
+  Users,
+  ChevronRight,
+  Pencil, // เพิ่มไอคอน Pencil
+} from "lucide-react";
 import { CategoryTabs } from "@/components/CategoryTabs";
 import { PostCard } from "@/components/PostCard";
 import { samplePosts } from "@/data/community";
@@ -68,6 +75,20 @@ export default function CommunityPage() {
         post.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const handleCreateAction = () => {
+    if (activeTab === "clubs") {
+      router.push("/community/create-club");
+    } else {
+      router.push("/add-post");
+    }
+  };
+
+  // Helper สำหรับข้อความบนปุ่ม
+  const getButtonLabel = () => {
+    if (activeTab === "clubs") return "สร้างคลับ";
+    return t("community.create.post") || "สร้างโพสต์";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-gray-800">
       {/* === Header & Search === */}
@@ -86,11 +107,14 @@ export default function CommunityPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          {/* ✅ เปลี่ยนปุ่มเป็นแบบมีข้อความ (Text Button) */}
           <button
-            onClick={() => router.push("/add-post")}
-            className="bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+            onClick={handleCreateAction}
+            className="bg-blue-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-700 transition-all text-sm font-bold flex items-center gap-2 whitespace-nowrap active:scale-95"
           >
-            <Plus size={24} />
+            {activeTab === "clubs" ? <Plus size={18} /> : <Pencil size={16} />}
+            <span>{getButtonLabel()}</span>
           </button>
         </div>
 
@@ -225,9 +249,16 @@ export default function CommunityPage() {
                 {t("community.clubs.banner.desc") ||
                   "เข้าร่วมกลุ่มตามความสนใจเพื่อแลกเปลี่ยนประสบการณ์"}
               </p>
-              <button className="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold">
-                {t("community.clubs.explore") || "ค้นหากลุ่ม"}
-              </button>
+
+              {/* ปุ่มสร้างคลับใน Banner (เสริม) */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => router.push("/community/create-club")}
+                  className="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm flex items-center gap-1"
+                >
+                  <Plus size={16} /> สร้างคลับ
+                </button>
+              </div>
             </div>
 
             <h2 className="font-bold text-lg mb-2">
@@ -237,7 +268,7 @@ export default function CommunityPage() {
             {mockClubs.map((club) => (
               <div
                 key={club.id}
-                onClick={() => router.push(`/community/clubs/${club.id}`)} // 👈 ลิงก์ไปหน้า Club Detail
+                onClick={() => router.push(`/community/clubs/${club.id}`)}
                 className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-all active:scale-[0.98]"
               >
                 <div className="w-14 h-14 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden">
