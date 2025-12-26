@@ -18,6 +18,7 @@ export interface LocationFeature {
 export interface Location {
   id: number;
   name: string;
+  image?: string;
   position: [number, number];
   category: "Shopping Mall" | "Public Transport" | "Park" | "Restaurant";
   accessibility: "high" | "medium" | "low";
