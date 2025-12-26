@@ -1,4 +1,4 @@
-// src/lib/types/location.ts
+//
 
 export interface LocationFeature {
   name: string;
@@ -15,11 +15,16 @@ export interface LocationFeature {
   }[];
 }
 
+export interface BookingOption {
+  provider: "Agoda" | "Trip.com" | "Booking.com" | string;
+  url: string;
+}
+
 export interface Location {
   id: number;
   name: string;
   image?: string;
-  bookingLink?: string;
+  bookingLinks?: BookingOption[];
   position: [number, number];
   category: "Shopping Mall" | "Public Transport" | "Park" | "Restaurant";
   accessibility: "high" | "medium" | "low";

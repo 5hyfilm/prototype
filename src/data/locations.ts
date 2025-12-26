@@ -6,8 +6,16 @@ export const accessibleLocations: Location[] = [
   {
     id: 1,
     name: "EmQuartier",
-    bookingLink:
-      "https://www.agoda.com/partners/partnersearch.aspx?cid=1844104&pcs=1&city=9395",
+    bookingLinks: [
+      {
+        provider: "Agoda",
+        url: "https://www.agoda.com/partners/partnersearch.aspx?cid=1844104&pcs=1&city=9395",
+      },
+      {
+        provider: "Trip.com",
+        url: "https://www.trip.com/hotels/bangkok-hotel-detail-grande-centre-point-hotel-terminal21",
+      },
+    ],
     position: [13.7305, 100.5697],
     category: "Shopping Mall",
     accessibility: "high",
