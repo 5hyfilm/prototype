@@ -2562,7 +2562,7 @@ export const accessibleLocations: Location[] = [
   },
 
   {
-    id: 16,
+    id: 17,
     name: "Lotus Onnut",
     position: [13.705, 100.602],
     category: "Shopping Mall",
@@ -2690,7 +2690,7 @@ export const accessibleLocations: Location[] = [
   },
 
   {
-    id: 17,
+    id: 18,
     name: "Big C Ratchada",
     position: [13.7702, 100.5713],
     category: "Shopping Mall",
@@ -2818,7 +2818,7 @@ export const accessibleLocations: Location[] = [
   },
 
   {
-    id: 18,
+    id: 19,
     name: "Lotus Rama 4",
     position: [13.7208, 100.5416],
     category: "Shopping Mall",
@@ -2945,7 +2945,7 @@ export const accessibleLocations: Location[] = [
     },
   },
   {
-    id: 19,
+    id: 20,
     name: "Local Market Rama 3",
     position: [13.691, 100.5405],
     category: "Shopping Mall",
@@ -3066,7 +3066,7 @@ export const accessibleLocations: Location[] = [
   },
 
   {
-    id: 20,
+    id: 21,
     name: "Community Mall Bangkapi",
     position: [13.7685, 100.6479],
     category: "Shopping Mall",
@@ -3187,7 +3187,7 @@ export const accessibleLocations: Location[] = [
   },
 
   {
-    id: 21,
+    id: 22,
     name: "Fresh Mart Kaset",
     position: [13.8453, 100.5714],
     category: "Shopping Mall",
