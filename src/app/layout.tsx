@@ -6,6 +6,7 @@ import LayoutContent from "@/components/LayoutContent";
 import { LanguageProvider } from "../../contexts/LanguageContext";
 import { PrototypePopupProvider } from "@/components/PrototypePopupProvider";
 import { Analytics } from "@vercel/analytics/react";
+import { LoyaltyProvider } from "@/contexts/LoyaltyContext"; // ✅ เพิ่ม import
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,7 +25,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <LanguageProvider>
           <PrototypePopupProvider>
-            <LayoutContent>{children}</LayoutContent>
+            {/* ✅ ครอบด้วย LoyaltyProvider ตรงนี้ */}
+            <LoyaltyProvider>
+              <LayoutContent>{children}</LayoutContent>
+            </LoyaltyProvider>
             <Analytics />
           </PrototypePopupProvider>
         </LanguageProvider>
