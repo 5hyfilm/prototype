@@ -3,13 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Settings,
-  Edit2,
-  FileText,
-  ChevronRight,
-  Trash2, // เผื่อใช้ล้างข้อมูล (Optional)
-} from "lucide-react";
+import { Settings, Edit2, FileText, ChevronRight } from "lucide-react";
 import { WheelchairInfo } from "@/components/WheelchairInfo";
 import { RouteLibrary } from "@/components/RouteLibrary";
 import { MyPosts } from "@/components/MyPosts";
@@ -19,50 +13,57 @@ export default function ProfilePage() {
   const { t } = useLanguage();
   const router = useRouter();
 
-  // State เก็บจำนวน Draft ที่ค้างอยู่
   const [draftCount, setDraftCount] = useState(0);
 
-  // --- 🛠️ MOCK DATA GENERATOR (สำหรับทดสอบ) ---
+  // --- 🔥 เพิ่มส่วน Mock Data Generator ---
   useEffect(() => {
     const DRAFTS_KEY = "obstacle_report_drafts";
-    const existing = localStorage.getItem(DRAFTS_KEY);
+    const savedDrafts = localStorage.getItem(DRAFTS_KEY);
 
-    // ถ้ายังไม่มีข้อมูลเลย ให้สร้างข้อมูลจำลองขึ้นมา 2 อัน
-    if (!existing || JSON.parse(existing).length === 0) {
+    // ถ้าไม่มีข้อมูล หรือเป็น Array ว่าง -> ให้ยัดข้อมูลจำลอง 3 อันทันที
+    if (!savedDrafts || JSON.parse(savedDrafts).length === 0) {
       const mockDrafts = [
         {
-          id: "draft_demo_1",
-          category: "sidewalk",
-          type: "damaged",
-          description: "ทางเท้าแตกเป็นหลุมลึก ประมาณ 10 ซม. รถเข็นผ่านยากมาก",
-          location: [13.8055, 100.5742], // แถวลาดพร้าว
-          updatedAt: Date.now() - 1000000, // เมื่อวาน
+          id: "mock_1",
+          category: "ramp",
+          type: "steep",
+          description: "ทางลาดชันเกินไป วีลแชร์ไฟฟ้าขึ้นยากมาก",
+          location: [13.7563, 100.5018],
+          updatedAt: Date.now() - 100000, // 2-3 นาทีที่แล้ว
         },
         {
-          id: "draft_demo_2",
-          category: "restroom",
-          type: "not_accessible",
-          description: "ห้องน้ำคนพิการประตูล็อค ไม่ทราบบุคคลที่ถือกุญแจ",
-          location: [13.7469, 100.535], // แถวสยาม
-          updatedAt: Date.now(), // เพิ่งทำตะกี้
+          id: "mock_2",
+          category: "footpath",
+          type: "pothole",
+          description: "ฟุตบาทเป็นหลุมขนาดใหญ่หน้าเซเว่น",
+          location: [13.7469, 100.5349],
+          updatedAt: Date.now() - 3600000, // 1 ชั่วโมงที่แล้ว
+        },
+        {
+          id: "mock_3",
+          category: "elevator",
+          type: "broken",
+          description: "ลิฟต์ BTS สถานีหมอชิตเสีย (ฝั่งสวนจตุจักร)",
+          location: [13.8028, 100.554],
+          updatedAt: Date.now() - 86400000, // เมื่อวาน
         },
       ];
+
       localStorage.setItem(DRAFTS_KEY, JSON.stringify(mockDrafts));
-      console.log("Mock drafts injected! 💉");
-      setDraftCount(2); // อัปเดต state ทันที
+      setDraftCount(mockDrafts.length); // อัปเดตตัวเลขทันที
     } else {
-      // ถ้ามีของจริงอยู่แล้ว ก็นับตามจริง
+      // ถ้ามีอยู่แล้ว ก็นับตามจริง
       try {
-        const parsed = JSON.parse(existing);
+        const parsed = JSON.parse(savedDrafts);
         if (Array.isArray(parsed)) {
           setDraftCount(parsed.length);
         }
       } catch (e) {
-        console.error("Error reading drafts", e);
+        console.error("Error parsing drafts", e);
       }
     }
   }, []);
-  // ----------------------------------------------
+  // ----------------------------------------
 
   const handleEditProfile = () => {
     router.push("/profile/edit");
@@ -145,17 +146,17 @@ export default function ProfilePage() {
 
       {/* Main Content */}
       <div className="p-4 space-y-4">
-        {/* ✅ เมนู "แบบร่างที่บันทึกไว้" (แสดงตลอด เพื่อให้รู้ว่ามีฟีเจอร์นี้) */}
+        {/* ✅ ปุ่ม Draft แสดงจำนวน (ตอนนี้จะเป็น 3 แล้ว) */}
         <div
           onClick={handleViewDrafts}
-          className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between cursor-pointer border border-gray-100 hover:bg-gray-50 transition-colors active:scale-[0.98]"
+          className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between cursor-pointer border border-gray-100 hover:bg-gray-50 transition-colors active:scale-[0.99]"
         >
           <div className="flex items-center gap-3">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                 draftCount > 0
                   ? "bg-orange-100 text-orange-600"
-                  : "bg-gray-100 text-gray-400"
+                  : "bg-gray-100 text-gray-500"
               }`}
             >
               <FileText size={20} />
@@ -164,13 +165,7 @@ export default function ProfilePage() {
               <h3 className="font-medium text-gray-900 text-sm">
                 {t("drafts.title") || "แบบร่างที่บันทึกไว้"}
               </h3>
-              <p
-                className={`text-xs mt-0.5 ${
-                  draftCount > 0
-                    ? "text-orange-600 font-medium"
-                    : "text-gray-400"
-                }`}
-              >
+              <p className="text-xs text-gray-500 mt-0.5">
                 {draftCount > 0
                   ? `คุณมีรายการค้างอยู่ ${draftCount} รายการ`
                   : "ไม่มีรายการค้าง"}
@@ -178,7 +173,6 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Badge แจ้งเตือนจำนวน (สีแดง) */}
             {draftCount > 0 && (
               <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center shadow-sm animate-pulse">
                 {draftCount}
