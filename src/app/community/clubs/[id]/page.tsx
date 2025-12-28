@@ -6,7 +6,6 @@ import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft,
   Share2,
-  MoreHorizontal,
   Users,
   MapPin,
   Calendar,
@@ -15,7 +14,6 @@ import {
   Plus,
   Settings,
   UserMinus,
-  UserCheck,
   LogOut,
 } from "lucide-react";
 import { PostCard } from "@/components/PostCard";
