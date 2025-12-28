@@ -8,6 +8,12 @@ export type PointActionType =
   | "HELP_VERIFY"
   | "BACKGROUND_RECORD";
 
+export interface PointBonusData {
+  hasDescription?: boolean;
+  descriptionLength?: number;
+  distance?: number;
+}
+
 export interface UserLevel {
   level: number;
   name: string; // เช่น Newcomer, Explorer

@@ -8,6 +8,7 @@ import {
   PointTransaction,
   LEVEL_MILESTONES,
   UserLevel,
+  PointBonusData, // [UPDATED] อย่าลืม import ตัวนี้เข้ามานะครับ
 } from "@/lib/types/loyalty";
 
 interface LoyaltyContextType {
@@ -15,13 +16,13 @@ interface LoyaltyContextType {
   transactions: PointTransaction[];
   currentLevelInfo: UserLevel;
   nextLevelInfo: UserLevel | null;
-  earnPoints: (action: PointActionType, bonusData?: any) => void;
+  // [UPDATED] เปลี่ยน any เป็น PointBonusData
+  earnPoints: (action: PointActionType, bonusData?: PointBonusData) => void;
   isLoading: boolean;
 }
 
 const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
 
-// ข้อมูลตั้งต้น (Mock ว่า User มีแต้มอยู่บ้างแล้ว)
 const initialStats: UserLoyaltyStats = {
   totalPoints: 1250,
   currentLevel: 3,
@@ -34,7 +35,6 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // หา Level ปัจจุบันจากแต้มรวม [cite: 208]
   const getLevelInfo = (points: number) => {
     return (
       LEVEL_MILESTONES.find(
@@ -47,7 +47,6 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     return LEVEL_MILESTONES.find((l) => l.level === currentLevel + 1) || null;
   };
 
-  // ตรวจสอบ Daily Cap (ลิมิตจำนวนครั้งต่อวัน)
   const checkDailyCap = (action: PointActionType, currentCount: number) => {
     const limits: Record<PointActionType, number> = {
       REPORT_OBSTACLE: 5,
@@ -60,18 +59,23 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     return currentCount < (limits[action] || 99);
   };
 
-  // คำนวณแต้มตาม Point Matrix ใน SRS
-  const calculatePoints = (action: PointActionType, data?: any): number => {
+  // [UPDATED] เปลี่ยน any เป็น PointBonusData และเพิ่ม Type Guard
+  const calculatePoints = (
+    action: PointActionType,
+    data?: PointBonusData
+  ): number => {
     let points = 0;
     switch (action) {
       case "REPORT_OBSTACLE":
         points = 5; // รูปถ่าย
         if (data?.hasDescription) points += 2;
-        if (data?.descriptionLength >= 200) points += 2;
+        // ใช้ || 0 เพื่อกันค่า undefined
+        if ((data?.descriptionLength || 0) >= 200) points += 2;
         break;
       case "RECORD_ROUTE":
         points = 7; // พื้นฐาน
-        if (data?.distance > 10) points += 5; // โบนัสระยะทาง > 10km
+        // ใช้ || 0 เพื่อกันค่า undefined
+        if ((data?.distance || 0) > 10) points += 5;
         break;
       case "REVIEW_PLACE":
         points = 5;
@@ -88,14 +92,13 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     return points;
   };
 
-  const earnPoints = (action: PointActionType, bonusData?: any) => {
+  // [UPDATED] เปลี่ยน any เป็น PointBonusData
+  const earnPoints = (action: PointActionType, bonusData?: PointBonusData) => {
     setIsLoading(true);
 
-    // จำลอง Network Request
     setTimeout(() => {
       const currentActionCount = stats.dailyActionCounts[action] || 0;
 
-      // ถ้าเกินโควต้าต่อวัน ให้หยุด (ในของจริงอาจจะ return หรือแจ้งเตือน)
       if (!checkDailyCap(action, currentActionCount)) {
         console.log("Daily limit reached for", action);
         setIsLoading(false);
@@ -111,7 +114,7 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           totalPoints: newTotal,
-          currentLevel: newLevelInfo.level, // [cite: 209] อัปเดตเลเวลอัตโนมัติ
+          currentLevel: newLevelInfo.level,
           dailyActionCounts: {
             ...prev.dailyActionCounts,
             [action]: currentActionCount + 1,
@@ -123,7 +126,6 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
         };
       });
 
-      // บันทึก Transaction [cite: 219]
       const newTx: PointTransaction = {
         id: Date.now().toString(),
         userId: 1,
