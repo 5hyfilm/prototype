@@ -10,7 +10,6 @@ import {
   FileText,
   MapPin,
   Clock,
-  AlertCircle,
 } from "lucide-react";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import { ObstacleCategory, OBSTACLE_CATEGORIES } from "@/lib/types/obstacle";
