@@ -46,6 +46,12 @@ export function PostCard({
     // TODO: Implement actual share functionality
   };
 
+  const handleProfileClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // ลิงก์ไปหน้า Public Profile ของ User นั้น (ใช้ username เป็น id ชั่วคราว)
+    router.push(`/user/${username}`);
+  };
+
   return (
     <div
       className="bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer transition-transform hover:scale-[0.98]"
@@ -60,8 +66,12 @@ export function PostCard({
         />
       </div>
       <div className="p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">
+        {/* ✅ แก้ไข: เพิ่ม onClick และ Style ให้กดไปหน้า Profile ได้ */}
+        <div
+          className="flex items-center gap-2 mb-2 cursor-pointer hover:bg-gray-50 p-1 -ml-1 rounded-lg transition-colors w-fit"
+          onClick={handleProfileClick}
+        >
+          <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden border border-gray-100">
             {userAvatar ? (
               <img
                 src={userAvatar}
@@ -69,40 +79,58 @@ export function PostCard({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-blue-100 flex items-center justify-center text-blue-600">
+              <div className="w-full h-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
                 {username[0].toUpperCase()}
               </div>
             )}
           </div>
-          <span className="text-sm font-medium">{username}</span>
+          <span className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
+            {username}
+          </span>
         </div>
-        <p className="text-sm line-clamp-2 mb-2">{title}</p>
+
+        <p className="text-sm line-clamp-2 mb-2 text-gray-800">{title}</p>
+
         <div className="flex items-center gap-4">
           <button
             onClick={handleLike}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 group"
             aria-label={t("community.post.like")}
           >
             <Heart
               size={18}
-              className={liked ? "fill-red-500 text-red-500" : "text-gray-600"}
+              className={`transition-colors ${
+                liked
+                  ? "fill-red-500 text-red-500"
+                  : "text-gray-400 group-hover:text-red-500"
+              }`}
             />
-            <span className="text-xs text-gray-600">{likes}</span>
+            <span className="text-xs text-gray-500 group-hover:text-gray-700">
+              {likes}
+            </span>
           </button>
           <button
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 group"
             onClick={(e) => e.stopPropagation()}
             aria-label={t("community.post.comments")}
           >
-            <MessageCircle size={18} className="text-gray-600" />
-            <span className="text-xs text-gray-600">{comments}</span>
+            <MessageCircle
+              size={18}
+              className="text-gray-400 group-hover:text-blue-500 transition-colors"
+            />
+            <span className="text-xs text-gray-500 group-hover:text-gray-700">
+              {comments}
+            </span>
           </button>
           <button
             onClick={handleShare}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 group"
             aria-label={t("community.post.share")}
           >
-            <Share2 size={18} className="text-gray-600" />
+            <Share2
+              size={18}
+              className="text-gray-400 group-hover:text-green-500 transition-colors"
+            />
           </button>
         </div>
       </div>
