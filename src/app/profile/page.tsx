@@ -11,6 +11,8 @@ import {
   Trophy,
   Star,
   TrendingUp,
+  Map, // เพิ่มไอคอน Map
+  MessageSquare, // เพิ่มไอคอน Message
 } from "lucide-react";
 import { WheelchairInfo } from "@/components/WheelchairInfo";
 import { RouteLibrary } from "@/components/RouteLibrary";
@@ -21,6 +23,9 @@ import { useLoyalty } from "@/contexts/LoyaltyContext";
 export default function ProfilePage() {
   const { t } = useLanguage();
   const router = useRouter();
+
+  // ✅ 1. เพิ่ม State สำหรับจัดการ Tab (default เป็น 'posts')
+  const [activeTab, setActiveTab] = useState<"posts" | "routes">("posts");
 
   const { stats, currentLevelInfo, nextLevelInfo } = useLoyalty();
 
@@ -136,19 +141,17 @@ export default function ProfilePage() {
 
       {/* Main Content */}
       <div className="p-4 space-y-5">
-        {/* ✅ Loyalty Widget แก้ไขสีตัวอักษร: ใส่ !text-white เพื่อบังคับใช้สีขาวแน่นอน */}
+        {/* Loyalty Widget */}
         <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 rounded-2xl p-5 shadow-lg relative overflow-hidden ring-1 ring-blue-800/20">
           <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
             <Star size={120} className="text-white" />
           </div>
           <div className="relative z-10 flex justify-between items-end">
             <div>
-              {/* บังคับสีขาวที่นี่ */}
               <p className="!text-white text-sm font-bold mb-1 flex items-center gap-1 shadow-sm">
                 <Star size={14} className="text-yellow-300 fill-yellow-300" />
                 คะแนนสะสม (Points)
               </p>
-              {/* และบังคับสีขาวที่ตัวเลขด้วย */}
               <h3 className="!text-white text-4xl font-black tracking-tight drop-shadow-md">
                 {stats.totalPoints.toLocaleString()}
               </h3>
@@ -206,8 +209,45 @@ export default function ProfilePage() {
 
         <div className="space-y-5">
           <WheelchairInfo />
-          <MyPosts />
-          <RouteLibrary />
+
+          {/* ✅ 2. UI แบบ Slide/Tab Switcher */}
+          <div className="bg-gray-100 p-1 rounded-xl flex gap-1">
+            <button
+              onClick={() => setActiveTab("posts")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                activeTab === "posts"
+                  ? "bg-white text-blue-700 shadow-sm scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+              }`}
+            >
+              <MessageSquare size={16} />
+              โพสต์ของฉัน
+            </button>
+            <button
+              onClick={() => setActiveTab("routes")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                activeTab === "routes"
+                  ? "bg-white text-blue-700 shadow-sm scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+              }`}
+            >
+              <Map size={16} />
+              คลังเส้นทาง
+            </button>
+          </div>
+
+          {/* ✅ 3. Conditional Rendering แสดงผลตาม Tab ที่เลือก */}
+          <div className="transition-all duration-300 ease-in-out">
+            {activeTab === "posts" ? (
+              <div className="animate-fade-in">
+                <MyPosts />
+              </div>
+            ) : (
+              <div className="animate-fade-in">
+                <RouteLibrary />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
