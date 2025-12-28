@@ -22,6 +22,22 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchNotification, setShowSearchNotification] = useState(false);
 
+  // --- [GOOSEWAY UPDATE] State สำหรับ Category Filter ---
+  const [selectedCategory, setSelectedCategory] = useState("all");
+
+  // ข้อมูลหมวดหมู่สำหรับแสดงผล (Icon + Label)
+  const CATEGORIES = [
+    { id: "all", label: t("common.all") || "ทั้งหมด", icon: "🌏" },
+    { id: "Restaurant", label: "ร้านอาหาร", icon: "🍳" },
+    { id: "Cafe", label: "คาเฟ่", icon: "☕" },
+    { id: "Hotel", label: "ที่พัก", icon: "🛏️" },
+    { id: "Shopping Mall", label: "ห้างฯ", icon: "🛍️" },
+    { id: "Hospital", label: "โรงพยาบาล", icon: "🏥" },
+    { id: "Restroom", label: "ห้องน้ำ", icon: "🚻" },
+    { id: "Park", label: "สวนสาธารณะ", icon: "🌳" },
+    { id: "Public Transport", label: "ขนส่ง", icon: "🚆" },
+  ];
+
   // --- [เพิ่มใหม่] State สำหรับ Spotlight Advertising System ---
   const [showSpotlight, setShowSpotlight] = useState(false);
   const [hasShownSpotlight, setHasShownSpotlight] = useState(false);
@@ -91,6 +107,15 @@ export default function MapPage() {
       setTimeout(() => {
         setShowSearchNotification(false);
       }, 3000);
+    }
+  };
+
+  // --- [GOOSEWAY UPDATE] Handle Category Click ---
+  const handleCategorySelect = (id: string) => {
+    if (selectedCategory === id && id !== "all") {
+      setSelectedCategory("all"); // กดซ้ำเพื่อยกเลิก
+    } else {
+      setSelectedCategory(id);
     }
   };
 
@@ -222,14 +247,41 @@ export default function MapPage() {
 
   return (
     <div className="h-[calc(100vh-64px)] relative">
-      {/* Search Bar */}
-      <div className="absolute top-4 left-4 right-4 z-[1000]">
-        <MapSearchBar onSearch={handleSearch} />
+      {/* --- [GOOSEWAY UPDATE] Search Bar & Categories Wrapper --- */}
+      <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col gap-3 pointer-events-none">
+        {/* 1. Search Bar */}
+        <div className="pointer-events-auto shadow-sm">
+          <MapSearchBar onSearch={handleSearch} />
+        </div>
+
+        {/* 2. Category Pills (Horizontal Scroll) */}
+        <div
+          className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide pointer-events-auto"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => handleCategorySelect(cat.id)}
+              className={`
+                 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shadow-md border
+                 ${
+                   selectedCategory === cat.id
+                     ? "bg-blue-600 text-white border-blue-600 scale-105" // Active State
+                     : "bg-white text-gray-700 border-gray-100 hover:bg-gray-50" // Inactive State
+                 }
+               `}
+            >
+              <span className="text-lg">{cat.icon}</span>
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Notification เมื่อค้นหาสถานที่ */}
+      {/* Notification (ปรับตำแหน่งลงมาเป็น top-36 เพื่อหลบปุ่มหมวดหมู่) */}
       {showSearchNotification && (
-        <div className="absolute top-20 left-4 right-4 bg-blue-50 border border-blue-200 rounded-lg p-3 z-[1000] flex items-center shadow-md animate-fade-in">
+        <div className="absolute top-36 left-4 right-4 bg-blue-50 border border-blue-200 rounded-lg p-3 z-[1000] flex items-center shadow-md animate-fade-in">
           <Info className="text-blue-500 mr-2 flex-shrink-0" size={20} />
           <p className="text-sm text-blue-700">
             {t("map.showing.accessible.locations.nearby")}
@@ -269,6 +321,8 @@ export default function MapPage() {
       <div className="w-full h-full">
         <Map
           searchQuery={searchQuery}
+          // @ts-ignore: กรุณาอัปเดต Map.tsx ให้รับ prop 'category' เพิ่มเติม
+          category={selectedCategory}
           recordedPath={isRecording ? recordedPath : []}
           isRecording={isRecording}
         />

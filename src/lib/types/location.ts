@@ -26,7 +26,17 @@ export interface Location {
   image?: string;
   bookingLinks?: BookingOption[];
   position: [number, number];
-  category: "Shopping Mall" | "Public Transport" | "Park" | "Restaurant";
+  // [GOOSEWAY UPDATE] เพิ่มหมวดหมู่ให้ครบถ้วนตามแบบ Google Maps
+  category:
+    | "Shopping Mall"
+    | "Public Transport"
+    | "Park"
+    | "Restaurant"
+    | "Hotel"
+    | "Cafe"
+    | "Hospital"
+    | "Restroom"
+    | "Other";
   accessibility: "high" | "medium" | "low";
   features: string[];
   description: string;
