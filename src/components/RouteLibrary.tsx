@@ -1,71 +1,55 @@
 // src/components/RouteLibrary.tsx
-import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { Map, Plus, Route as RouteIcon } from "lucide-react";
 import { sampleRoutes } from "@/data/routes";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import RouteCard from "./RouteCard";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 export function RouteLibrary() {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"saved" | "recent">("saved");
+  const router = useRouter();
 
-  // กรองเส้นทางตามแท็บที่เลือก
-  const filteredRoutes = sampleRoutes.filter(
-    (route) => route.type === activeTab
-  );
+  // ✅ ใช้ลิสต์เดียว เรียงจากล่าสุด
+  const myRoutes = sampleRoutes.slice(0, 6);
+
+  if (myRoutes.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-blue-50 text-blue-400 rounded-full flex items-center justify-center mb-3">
+          <RouteIcon size={32} />
+        </div>
+        <h3 className="font-bold text-gray-800 mb-1">
+          ยังไม่มีเส้นทางที่บันทึก
+        </h3>
+        <p className="text-gray-500 text-sm mb-5 max-w-[200px]">
+          เริ่มบันทึกการเดินทางของคุณเพื่อช่วยให้ชุมชนของเราเติบโต
+        </p>
+        <button
+          onClick={() => router.push("/map")}
+          className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"
+        >
+          <Plus size={18} />
+          บันทึกเส้นทางใหม่
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-medium text-gray-900">
-          {t("profile.routes.library") || "ไลบรารีเส้นทาง"}
-        </h3>
-        <Link
-          href="/routes"
-          className="text-blue-600 text-sm flex items-center"
-        >
-          {t("common.view.all") || "ดูทั้งหมด"}{" "}
-          <ChevronRight className="w-4 h-4 ml-1" />
-        </Link>
-      </div>
-
-      <div className="flex gap-4 mb-4">
-        <button
-          onClick={() => setActiveTab("saved")}
-          className={`px-4 py-2 rounded-full text-sm ${
-            activeTab === "saved"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          {t("profile.routes.saved") || "เส้นทางที่บันทึก"}
-        </button>
-        <button
-          onClick={() => setActiveTab("recent")}
-          className={`px-4 py-2 rounded-full text-sm ${
-            activeTab === "recent"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          {t("profile.routes.recent") || "เส้นทางล่าสุด"}
-        </button>
-      </div>
-
+    <div className="space-y-4">
+      {/* Grid Layout 2 Columns (เพื่อให้เท่ากับ Post) */}
       <div className="grid grid-cols-2 gap-3">
-        {filteredRoutes.slice(0, 4).map((route) => (
+        {myRoutes.map((route) => (
           <RouteCard key={route.id} route={route} compact />
         ))}
       </div>
 
-      {filteredRoutes.length === 0 && (
-        <div className="text-center py-4 text-gray-500 text-sm">
-          {activeTab === "saved"
-            ? t("profile.routes.no.saved") || "ยังไม่มีเส้นทางที่บันทึกไว้"
-            : t("profile.routes.no.recent") || "ยังไม่มีเส้นทางที่ใช้ล่าสุด"}
-        </div>
-      )}
+      {/* ถ้ามีเยอะ ให้มีปุ่ม Load More */}
+      <div className="pt-4 pb-8 text-center">
+        <p className="text-xs text-gray-400">
+          แสดงทั้งหมด {myRoutes.length} รายการ
+        </p>
+      </div>
     </div>
   );
 }

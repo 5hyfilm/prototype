@@ -2,69 +2,61 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { myPosts } from "@/data/userPosts";
-import { Edit, ChevronRight } from "lucide-react";
+import { Plus, Image as ImageIcon } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { PostCard } from "./PostCard";
 
 export function MyPosts() {
   const { t } = useLanguage();
   const router = useRouter();
-  const [posts] = useState(myPosts.slice(0, 2)); // แสดงเฉพาะ 2 โพสต์ล่าสุด
+  const [posts] = useState([...myPosts].reverse()); // เอาล่าสุดขึ้นก่อน
 
-  return (
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">{t("profile.my.posts")}</h2>
+  if (posts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mb-3">
+          <ImageIcon size={32} />
+        </div>
+        <h3 className="font-bold text-gray-800 mb-1">ยังไม่มีโพสต์</h3>
+        <p className="text-gray-500 text-sm mb-5">
+          แชร์เรื่องราวหรือประสบการณ์ของคุณให้เพื่อนๆ รู้
+        </p>
         <button
-          onClick={() => router.push("/profile/posts")}
-          className="text-sm text-blue-600 flex items-center"
+          onClick={() => router.push("/add-post")}
+          className="bg-white text-gray-700 border border-gray-300 px-6 py-2.5 rounded-full font-bold text-sm hover:bg-gray-50 active:scale-95 transition-all flex items-center gap-2"
         >
-          {t("common.see.all")} <ChevronRight size={16} />
+          <Plus size={18} />
+          สร้างโพสต์แรก
         </button>
       </div>
+    );
+  }
 
-      {posts.length > 0 ? (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              className="border-b pb-4 last:border-b-0 last:pb-0"
-            >
-              <div className="flex justify-between">
-                <h3 className="font-medium mb-1">{post.title}</h3>
-                <button
-                  onClick={() => router.push(`/profile/posts/edit/${post.id}`)}
-                  className="text-gray-400 hover:text-blue-600"
-                >
-                  <Edit size={16} />
-                </button>
-              </div>
-              <p className="text-gray-600 text-sm line-clamp-2 mb-2">
-                {post.content}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {post.tags?.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-4">
-          <p className="text-gray-500 mb-2">{t("profile.no.posts.yet")}</p>
-          <button
-            onClick={() => router.push("/add-post")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
-          >
-            {t("profile.create.post")}
-          </button>
-        </div>
-      )}
+  return (
+    <div className="space-y-4">
+      {/* Grid Layout 2 Columns */}
+      <div className="grid grid-cols-2 gap-3">
+        {posts.map((post) => (
+          <PostCard
+            key={post.id}
+            id={post.id}
+            // ✅ แก้ไขตรงนี้: เปลี่ยนจาก post.image เป็น post.imageUrl
+            imageUrl={
+              post.imageUrl || "/image/community/community_1/community_1_0.jpg"
+            }
+            title={post.title}
+            username="Me"
+            userAvatar="/image/profile/profile.jpg"
+            likes={post.likes}
+            comments={post.comments}
+          />
+        ))}
+      </div>
+      <div className="pt-4 pb-8 text-center">
+        <p className="text-xs text-gray-400">
+          แสดงทั้งหมด {posts.length} รายการ
+        </p>
+      </div>
     </div>
   );
 }
