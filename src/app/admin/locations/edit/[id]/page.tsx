@@ -10,10 +10,19 @@ import { AccessibilityDetailsEditor } from "@/components/admin/AccessibilityDeta
 import { ReviewsManager } from "@/components/admin/ReviewsManager";
 import type { LocationFeature } from "@/lib/types/location";
 
-// Define form data type
+// ✅ แก้ไข 1: ขยาย Type ให้ครอบคลุมทุก Category ที่มีในระบบ
 interface LocationFormData {
   name: string;
-  category: "Shopping Mall" | "Public Transport" | "Park" | "Restaurant";
+  category:
+    | "Shopping Mall"
+    | "Public Transport"
+    | "Park"
+    | "Restaurant"
+    | "Hotel"
+    | "Cafe"
+    | "Hospital"
+    | "Restroom"
+    | "Other";
   accessibility: "high" | "medium" | "low";
   description: string;
   position: [number, number];
@@ -45,9 +54,6 @@ export default function EditLocation() {
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [notFound, setNotFound] = useState<boolean>(false);
 
-  // แท็บสำหรับฟอร์ม
-  // src/app/admin/locations/edit/[id]/page.tsx
-
   const tabs = [
     { name: "ข้อมูลทั่วไป", icon: <MapPin size={18} /> },
     { name: "การเข้าถึงโดยละเอียด", icon: <MapPin size={18} /> },
@@ -58,7 +64,6 @@ export default function EditLocation() {
   useEffect(() => {
     const loadLocation = async () => {
       try {
-        // จำลองการโหลดข้อมูลจาก API
         const locationData = accessibleLocations.find(
           (loc) => loc.id === Number(locationId)
         );
@@ -72,19 +77,22 @@ export default function EditLocation() {
         // ตั้งค่าข้อมูลฟอร์ม
         setFormData({
           name: locationData.name,
-          category: locationData.category,
-          accessibility: locationData.accessibility,
+          // ✅ ตอนนี้ Type ตรงกันแล้ว TypeScript จะไม่แจ้ง error ตรงนี้
+          category: locationData.category as LocationFormData["category"],
+          accessibility: locationData.accessibility as
+            | "high"
+            | "medium"
+            | "low",
           description: locationData.description,
           position: locationData.position,
-          features: [...locationData.features, ""], // เพิ่มช่องว่างเพื่อให้เพิ่มได้
+          features: [...locationData.features, ""],
           accessibilityScores: locationData.accessibilityScores,
         });
 
-        // ตั้งค่ารูปภาพจำลอง (ในระบบจริงควรใช้รูปภาพจริงของสถานที่)
         const mockImages = Object.values(locationData.accessibilityScores)
           .flatMap((score) => score.images)
           .map((img) => img.url)
-          .slice(0, 5); // ใช้เพียง 5 รูปแรก
+          .slice(0, 5);
 
         setOriginalImages(mockImages);
         setPreviewImages(mockImages);
@@ -99,7 +107,6 @@ export default function EditLocation() {
     loadLocation();
   }, [locationId]);
 
-  // จัดการการเปลี่ยนแปลงข้อมูลในฟอร์ม
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -107,54 +114,40 @@ export default function EditLocation() {
     setFormData({ ...formData, [name]: value });
   };
 
-  // จัดการการเปลี่ยนแปลงตำแหน่ง
   const handlePositionChange = (index: number, value: string) => {
     const newPosition: [number, number] = [...formData.position];
     newPosition[index] = parseFloat(value);
     setFormData({ ...formData, position: newPosition });
   };
 
-  // จัดการการอัปโหลดรูปภาพ
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-
     const files = Array.from(e.target.files);
-
-    // สร้าง URL สำหรับพรีวิวรูปภาพใหม่
     const newPreviewImages = files.map((file) => URL.createObjectURL(file));
     setPreviewImages([...originalImages, ...newPreviewImages]);
-
-    // เก็บไฟล์รูปภาพใหม่
     setNewImages([...newImages, ...files]);
   };
 
-  // ลบรูปภาพเดิม
   const removeOriginalImage = (index: number) => {
     const newOriginalImages = [...originalImages];
     newOriginalImages.splice(index, 1);
     setOriginalImages(newOriginalImages);
-
-    // อัพเดทพรีวิว
     setPreviewImages([
       ...newOriginalImages,
       ...newImages.map((file) => URL.createObjectURL(file)),
     ]);
   };
 
-  // ลบรูปภาพใหม่
   const removeNewImage = (index: number) => {
     const newImageArray = [...newImages];
     newImageArray.splice(index, 1);
     setNewImages(newImageArray);
-
-    // อัพเดทพรีวิว
     setPreviewImages([
       ...originalImages,
       ...newImageArray.map((file) => URL.createObjectURL(file)),
     ]);
   };
 
-  // อัพเดทข้อมูลคุณสมบัติการเข้าถึงโดยละเอียด
   const handleUpdateAccessibilityFeature = (
     key: string,
     feature: LocationFeature
@@ -168,18 +161,15 @@ export default function EditLocation() {
     });
   };
 
-  // บันทึกข้อมูล
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
 
     try {
-      // กรองคุณสมบัติที่ว่างออก
       const filteredFeatures = formData.features.filter(
         (feature) => feature.trim() !== ""
       );
 
-      // จำลองการบันทึกข้อมูล
       console.log("Saving updated location:", {
         ...formData,
         features: filteredFeatures,
@@ -187,10 +177,7 @@ export default function EditLocation() {
         newImages: newImages.length,
       });
 
-      // รอสักครู่เพื่อจำลองการส่งข้อมูล
       await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-
-      // กลับไปยังหน้ารายการสถานที่
       router.push("/admin/locations");
     } catch (error) {
       console.error("Error saving location:", error);
@@ -200,14 +187,13 @@ export default function EditLocation() {
 
   const openLocationOnMap = () => {
     const [latitude, longitude] = formData.position;
-
     router.push(
       `/map?lat=${latitude}&lng=${longitude}&name=${encodeURIComponent(
         formData.name
       )}`
     );
   };
-  // แสดงหน้า 404 ถ้าไม่พบข้อมูล
+
   if (notFound && !loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -228,7 +214,6 @@ export default function EditLocation() {
     );
   }
 
-  // แสดงหน้า Loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -242,7 +227,6 @@ export default function EditLocation() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Link href="/admin/locations" className="mr-4">
@@ -263,7 +247,6 @@ export default function EditLocation() {
         </button>
       </div>
 
-      {/* Form Tabs */}
       <div className="bg-white rounded-lg shadow">
         <div className="border-b">
           <nav className="flex overflow-x-auto">
@@ -284,9 +267,7 @@ export default function EditLocation() {
           </nav>
         </div>
 
-        {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-6">
-          {/* ข้อมูลทั่วไป */}
           <div className={tabIndex === 0 ? "block" : "hidden"}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -324,10 +305,16 @@ export default function EditLocation() {
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
+                    {/* ✅ แก้ไข 2: เพิ่มตัวเลือกให้ครบตาม Type */}
                     <option value="Shopping Mall">ห้างสรรพสินค้า</option>
                     <option value="Public Transport">ระบบขนส่งสาธารณะ</option>
                     <option value="Park">สวนสาธารณะ</option>
                     <option value="Restaurant">ร้านอาหาร</option>
+                    <option value="Hotel">โรงแรม</option>
+                    <option value="Cafe">คาเฟ่</option>
+                    <option value="Hospital">โรงพยาบาล</option>
+                    <option value="Restroom">ห้องน้ำ</option>
+                    <option value="Other">อื่นๆ</option>
                   </select>
                 </div>
               </div>
@@ -435,7 +422,6 @@ export default function EditLocation() {
             </div>
           </div>
 
-          {/* การเข้าถึงโดยละเอียด */}
           <div className={tabIndex === 1 ? "block" : "hidden"}>
             <AccessibilityDetailsEditor
               features={formData.accessibilityScores}
@@ -443,19 +429,16 @@ export default function EditLocation() {
             />
           </div>
 
-          {/* รีวิวและความคิดเห็น */}
           <div className={tabIndex === 2 ? "block" : "hidden"}>
             <ReviewsManager locationId={Number(locationId)} />
           </div>
 
-          {/* รูปภาพ */}
           <div className={tabIndex === 4 ? "block" : "hidden"}>
             <div className="space-y-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 รูปภาพสถานที่
               </label>
 
-              {/* รูปภาพพรีวิว */}
               {previewImages.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
                   {originalImages.map((src, index) => (
@@ -503,7 +486,6 @@ export default function EditLocation() {
                 </div>
               )}
 
-              {/* ฟอร์มอัปโหลดรูปภาพ */}
               <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center cursor-pointer hover:border-blue-500">
                 <input
                   type="file"
@@ -526,7 +508,6 @@ export default function EditLocation() {
             </div>
           </div>
 
-          {/* ปุ่มดำเนินการ */}
           <div className="mt-8 flex justify-end gap-4 border-t pt-6">
             <Link
               href="/admin/locations"
