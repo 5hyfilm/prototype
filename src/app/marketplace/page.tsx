@@ -1,0 +1,159 @@
+// src/app/marketplace/page.tsx
+"use client";
+
+import { useState } from "react";
+import { Ticket, Search, Filter, Coins, Store } from "lucide-react";
+import {
+  MarketplaceItemCard,
+  MarketplaceItem,
+} from "@/components/MarketplaceItemCard";
+import { ComingSoonPopup } from "@/components/ComingSoonPopup";
+
+// Mock Data
+const mockItems: MarketplaceItem[] = [
+  {
+    id: "1",
+    title: "ส่วนลด 100 บาท Starbucks (สาขา Accessible)",
+    category: "lifestyle",
+    points: 800,
+    originalPrice: 100,
+    merchantName: "Starbucks",
+    rating: 4.8,
+    image: "/api/placeholder/400/320",
+  },
+  {
+    id: "2",
+    title: "Voucher นั่งรถแท็กซี่คนพิการฟรี 1 เที่ยว",
+    category: "travel",
+    points: 1500,
+    originalPrice: 350,
+    merchantName: "Cabb Taxi",
+    rating: 4.9,
+    image: "/api/placeholder/400/320",
+  },
+  {
+    id: "3",
+    title: "เช่าวีลแชร์ไฟฟ้า รุ่น Lite 1 วัน",
+    category: "health",
+    points: 2500,
+    originalPrice: 1000,
+    merchantName: "GooseWay Rental",
+    rating: 5.0,
+    image: "/api/placeholder/400/320",
+  },
+  {
+    id: "4",
+    title: "ส่วนลดโรงแรม Hop Inn (ห้อง Accessible)",
+    category: "travel",
+    points: 1200,
+    originalPrice: 300,
+    merchantName: "Hop Inn",
+    rating: 4.5,
+    image: "/api/placeholder/400/320",
+  },
+];
+
+export default function MarketplacePage() {
+  const [activeTab, setActiveTab] = useState<
+    "all" | "lifestyle" | "travel" | "health"
+  >("all");
+  const [showPopup, setShowPopup] = useState(false);
+  const userPoints = 3450;
+
+  const filteredItems =
+    activeTab === "all"
+      ? mockItems
+      : mockItems.filter((item) => item.category === activeTab);
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-24 text-gray-800">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-b-[2rem] shadow-lg relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 p-4 opacity-10 rotate-12">
+          <Store size={180} />
+        </div>
+
+        <div className="relative z-10 mt-2">
+          <h1 className="text-2xl font-bold mb-1 tracking-tight">
+            Marketplace
+          </h1>
+          <p className="text-blue-100 text-sm mb-6 opacity-90">
+            แลกสิทธิพิเศษเพื่อการเดินทางของคุณ
+          </p>
+
+          <div className="flex items-center justify-between bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+            <div>
+              <p className="text-xs text-blue-100 mb-1">แต้มสะสมของคุณ</p>
+              <div className="flex items-baseline gap-1">
+                <Coins
+                  size={20}
+                  className="text-yellow-400"
+                  fill="currentColor"
+                />
+                <span className="text-3xl font-bold">
+                  {userPoints.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <div className="h-10 w-px bg-white/20 mx-2"></div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowPopup(true)}
+                className="flex flex-col items-center justify-center w-16 h-16 bg-white rounded-xl text-blue-600 shadow-sm active:scale-95 transition-all"
+              >
+                <Ticket size={20} className="mb-1" />
+                <span className="text-[10px] font-bold">คูปอง</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="px-4 py-6 sticky top-0 bg-gray-50/95 backdrop-blur-sm z-20 overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 whitespace-nowrap">
+          {[
+            { id: "all", label: "ทั้งหมด" },
+            { id: "lifestyle", label: "☕ กิน/ดื่ม" },
+            { id: "travel", label: "🏨 ท่องเที่ยว" },
+            { id: "health", label: "⚕️ สุขภาพ" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? "bg-blue-600 text-white shadow-md scale-105"
+                  : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Items Grid */}
+      <div className="px-4 grid grid-cols-2 gap-4">
+        {filteredItems.map((item) => (
+          <MarketplaceItemCard
+            key={item.id}
+            item={item}
+            onRedeem={() => setShowPopup(true)}
+          />
+        ))}
+      </div>
+
+      {filteredItems.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Search className="text-gray-400" />
+          </div>
+          <p className="text-gray-400 text-sm">ไม่พบรายการในหมวดหมู่นี้</p>
+        </div>
+      )}
+
+      <ComingSoonPopup isOpen={showPopup} onClose={() => setShowPopup(false)} />
+    </div>
+  );
+}
