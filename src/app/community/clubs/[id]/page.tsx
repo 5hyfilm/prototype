@@ -25,15 +25,17 @@ import {
 } from "@/data/clubs"; // Import mock data
 import { useLanguage } from "../../../../../contexts/LanguageContext";
 
+// ✅ 1. สร้าง Type Alias สำหรับ Tabs เพื่อความชัดเจนและ Type Safety
+type ClubTab = "feed" | "events" | "leaderboard" | "members";
+
 export default function ClubDetailPage() {
   const { t } = useLanguage();
   const router = useRouter();
   const params = useParams();
 
   // State
-  const [activeTab, setActiveTab] = useState<
-    "feed" | "events" | "leaderboard" | "members"
-  >("feed");
+  // ✅ 2. ใช้ Type Alias ที่สร้างไว้
+  const [activeTab, setActiveTab] = useState<ClubTab>("feed");
   const [isJoined, setIsJoined] = useState(true); // สมมติว่า Join แล้วเพื่อโชว์ฟีเจอร์ภายใน
   const [isAdmin] = useState(true); // สมมติว่าเป็น Admin เพื่อโชว์ปุ่มจัดการ
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<
@@ -59,6 +61,14 @@ export default function ClubDetailPage() {
       // Logic to leave club API
     }
   };
+
+  // ✅ 3. สร้าง Array ของ Tabs พร้อมระบุ Type ให้ถูกต้อง
+  const tabs: { id: ClubTab; label: string }[] = [
+    { id: "feed", label: "Feed" },
+    { id: "events", label: "Events" },
+    { id: "leaderboard", label: "Ranking" },
+    { id: "members", label: "Members" },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-gray-800">
@@ -148,15 +158,11 @@ export default function ClubDetailPage() {
       {/* === Tabs === */}
       <div className="bg-white mt-2 border-b border-gray-100 sticky top-0 z-10">
         <div className="flex justify-between px-2">
-          {[
-            { id: "feed", label: "Feed" },
-            { id: "events", label: "Events" },
-            { id: "leaderboard", label: "Ranking" },
-            { id: "members", label: "Members" },
-          ].map((tab) => (
+          {/* ✅ 4. ใช้ตัวแปร tabs ในการ map แทน array ที่เขียนสด */}
+          {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)} // ✅ ไม่ต้องใช้ as any แล้ว
               className={`flex-1 py-3 text-sm font-semibold relative ${
                 activeTab === tab.id ? "text-blue-600" : "text-gray-500"
               }`}

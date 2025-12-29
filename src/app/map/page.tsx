@@ -9,8 +9,8 @@ import { Info } from "lucide-react";
 import { RecordingIndicator } from "@/components/RecordingIndicator";
 import { RecordingControlModal } from "@/components/RecordingControlModal";
 import { useRouter } from "next/navigation";
-import { SponsoredSpotlight } from "@/components/SponsoredSpotlight"; // [เพิ่มใหม่] นำเข้า Component โฆษณา
-import { sponsoredLocations } from "@/data/sponsored"; // [เพิ่มใหม่] นำเข้าข้อมูลโฆษณา
+import { SponsoredSpotlight } from "@/components/SponsoredSpotlight";
+import { sponsoredLocations } from "@/data/sponsored";
 
 const Map = dynamic(() => import("@/components/Map").then((mod) => mod.Map), {
   ssr: false,
@@ -321,7 +321,7 @@ export default function MapPage() {
       <div className="w-full h-full">
         <Map
           searchQuery={searchQuery}
-          // @ts-ignore: กรุณาอัปเดต Map.tsx ให้รับ prop 'category' เพิ่มเติม
+          // @ts-expect-error: กรุณาอัปเดต Map.tsx ให้รับ prop 'category' เพิ่มเติม
           category={selectedCategory}
           recordedPath={isRecording ? recordedPath : []}
           isRecording={isRecording}

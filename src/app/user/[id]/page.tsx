@@ -15,7 +15,6 @@ import {
 import { samplePosts } from "@/data/community";
 import { sampleUsers } from "@/data/users";
 import { PostCard } from "@/components/PostCard";
-import { useLanguage } from "../../../../contexts/LanguageContext"; // ✅ ปรับ import path ให้สั้นลง (ถ้า path เดิมผิด)
 
 // Interface สำหรับข้อมูล User ที่จะแสดงในหน้านี้
 interface UserProfile {

@@ -139,7 +139,10 @@ function ReportObstacleContent() {
     setDraftStatus("saving");
     try {
       const allDraftsStr = localStorage.getItem(DRAFTS_KEY);
-      let allDrafts: DraftItem[] = allDraftsStr ? JSON.parse(allDraftsStr) : [];
+      // ✅ แก้ไข: เปลี่ยน let เป็น const เพราะเรา Mutate array ไม่ได้ Reassign variable
+      const allDrafts: DraftItem[] = allDraftsStr
+        ? JSON.parse(allDraftsStr)
+        : [];
 
       const draftData: DraftItem = {
         id: id,
@@ -178,7 +181,10 @@ function ReportObstacleContent() {
 
       // เพิ่มลง Array ครั้งแรก
       const allDraftsStr = localStorage.getItem(DRAFTS_KEY);
-      let allDrafts: DraftItem[] = allDraftsStr ? JSON.parse(allDraftsStr) : [];
+      // ✅ แก้ไข: เปลี่ยน let เป็น const
+      const allDrafts: DraftItem[] = allDraftsStr
+        ? JSON.parse(allDraftsStr)
+        : [];
 
       const newDraft: DraftItem = {
         id: targetId,
