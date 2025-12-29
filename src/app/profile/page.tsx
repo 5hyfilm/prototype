@@ -51,7 +51,9 @@ export default function ProfilePage() {
       try {
         const parsed = JSON.parse(savedDrafts);
         if (Array.isArray(parsed)) setDraftCount(parsed.length);
-      } catch (e) {}
+      } catch {
+        // ✅ แก้ไข: ลบ (e) ออก เพราะไม่ได้ใช้งาน (Optional Catch Binding)
+      }
     }
   }, []);
 
