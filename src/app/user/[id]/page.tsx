@@ -36,7 +36,6 @@ interface UserProfile {
 export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const { t } = useLanguage();
 
   const userId = params?.id as string;
   const decodedId = userId ? decodeURIComponent(userId) : "";
