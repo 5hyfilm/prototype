@@ -12,25 +12,32 @@ import {
   MapPin,
   ArrowUp,
   ArrowDown,
-  Map as MapIcon, // เพิ่ม import สำหรับไอคอนแผนที่
+  Map as MapIcon,
 } from "lucide-react";
 import { accessibleLocations } from "@/data/locations";
 import type { Location } from "@/lib/types/location";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // เพิ่ม import router
+import { useRouter } from "next/navigation";
 
+// ✅ 1. แก้ไข Type ให้ครอบคลุมทุกหมวดหมู่ที่มีในระบบ
 type CategoryType =
   | "Shopping Mall"
   | "Public Transport"
   | "Park"
   | "Restaurant"
+  | "Hotel" // เพิ่ม
+  | "Cafe" // เพิ่ม
+  | "Hospital" // เพิ่ม
+  | "Restroom" // เพิ่ม
+  | "Other" // เพิ่ม
   | "all";
+
 type AccessibilityType = "high" | "medium" | "low" | "all";
 type SortField = "name" | "category" | "accessibility";
 type SortDirection = "asc" | "desc";
 
 export default function AdminLocations() {
-  const router = useRouter(); // เพิ่ม router hook
+  const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -72,7 +79,6 @@ export default function AdminLocations() {
   });
 
   const handleViewOnMap = (location: Location) => {
-    // ส่งไปยังหน้าแผนที่พร้อมกับพารามิเตอร์สำหรับโฟกัสสถานที่
     router.push(
       `/map?lat=${location.position[0]}&lng=${
         location.position[1]
@@ -84,7 +90,6 @@ export default function AdminLocations() {
   const sortedLocations = [...filteredLocations].sort((a, b) => {
     let compareA: string | number, compareB: string | number;
 
-    // กำหนดค่าสำหรับเปรียบเทียบตามฟิลด์ที่เลือก
     switch (sortField) {
       case "name":
         compareA = a.name.toLowerCase();
@@ -95,7 +100,6 @@ export default function AdminLocations() {
         compareB = b.category.toLowerCase();
         break;
       case "accessibility":
-        // แปลงระดับการเข้าถึงเป็นตัวเลขเพื่อเรียงลำดับ
         const accessibilityRank: { [key: string]: number } = {
           high: 3,
           medium: 2,
@@ -109,7 +113,6 @@ export default function AdminLocations() {
         compareB = b.name.toLowerCase();
     }
 
-    // เรียงลำดับตามทิศทางที่เลือก
     if (sortDirection === "asc") {
       return compareA > compareB ? 1 : -1;
     } else {
@@ -117,13 +120,10 @@ export default function AdminLocations() {
     }
   });
 
-  // ฟังก์ชันเปลี่ยนการเรียงลำดับ
   const handleSort = (field: SortField) => {
     if (field === sortField) {
-      // ถ้าคลิกฟิลด์เดิม เปลี่ยนทิศทางการเรียง
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      // ถ้าคลิกฟิลด์ใหม่ ตั้งค่าฟิลด์และทิศทางเริ่มต้น
       setSortField(field);
       setSortDirection("asc");
     }
@@ -131,14 +131,12 @@ export default function AdminLocations() {
 
   const deleteLocation = () => {
     if (locationToDelete) {
-      // จำลองการลบข้อมูล
       setLocations(locations.filter((loc) => loc.id !== locationToDelete.id));
       setShowDeleteModal(false);
       setLocationToDelete(null);
     }
   };
 
-  // แสดง Loading
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -159,7 +157,6 @@ export default function AdminLocations() {
         </Link>
       </div>
 
-      {/* ส่วนค้นหาและกรอง */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-grow">
           <input
@@ -175,7 +172,6 @@ export default function AdminLocations() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* กรองตามหมวดหมู่ */}
           <div className="relative">
             <select
               value={categoryFilter}
@@ -184,11 +180,17 @@ export default function AdminLocations() {
               }
               className="pl-4 pr-8 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 appearance-none"
             >
+              {/* ✅ 2. เพิ่มตัวเลือกใน Dropdown ให้ครบ */}
               <option value="all">ทุกหมวดหมู่</option>
               <option value="Shopping Mall">ห้างสรรพสินค้า</option>
               <option value="Public Transport">ระบบขนส่งสาธารณะ</option>
               <option value="Park">สวนสาธารณะ</option>
               <option value="Restaurant">ร้านอาหาร</option>
+              <option value="Hotel">โรงแรม</option>
+              <option value="Cafe">คาเฟ่</option>
+              <option value="Hospital">โรงพยาบาล</option>
+              <option value="Restroom">ห้องน้ำ</option>
+              <option value="Other">อื่นๆ</option>
             </select>
             <ChevronDown
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -196,7 +198,6 @@ export default function AdminLocations() {
             />
           </div>
 
-          {/* กรองตามระดับการเข้าถึง */}
           <div className="relative">
             <select
               value={accessibilityFilter}
@@ -216,7 +217,6 @@ export default function AdminLocations() {
             />
           </div>
 
-          {/* ปุ่มดาวน์โหลด */}
           <button className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-gray-50">
             <Download size={18} />
             <span>ส่งออก</span>
@@ -224,7 +224,6 @@ export default function AdminLocations() {
         </div>
       </div>
 
-      {/* ตารางแสดงข้อมูล */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -313,6 +312,7 @@ export default function AdminLocations() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {/* ✅ TypeScript ไม่แจ้ง error แล้ว เพราะ location.category อยู่ใน CategoryType */}
                     {getCategoryName(location.category)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -340,7 +340,6 @@ export default function AdminLocations() {
                       >
                         <Edit size={18} />
                       </Link>
-                      {/* ปุ่มดูบนแผนที่ */}
                       <button
                         onClick={() => handleViewOnMap(location)}
                         className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-100"
@@ -357,7 +356,6 @@ export default function AdminLocations() {
         </table>
       </div>
 
-      {/* Modal ยืนยันการลบ */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
@@ -389,8 +387,8 @@ export default function AdminLocations() {
   );
 }
 
-// Helper functions
-function getCategoryName(category: CategoryType): string {
+// ✅ 3. แก้ไขฟังก์ชันให้รองรับ string หรือ CategoryType ที่ขยายแล้ว
+function getCategoryName(category: string): string {
   switch (category) {
     case "Shopping Mall":
       return "ห้างสรรพสินค้า";
@@ -400,6 +398,16 @@ function getCategoryName(category: CategoryType): string {
       return "สวนสาธารณะ";
     case "Restaurant":
       return "ร้านอาหาร";
+    case "Hotel":
+      return "โรงแรม";
+    case "Cafe":
+      return "คาเฟ่";
+    case "Hospital":
+      return "โรงพยาบาล";
+    case "Restroom":
+      return "ห้องน้ำ";
+    case "Other":
+      return "อื่นๆ";
     default:
       return category;
   }
