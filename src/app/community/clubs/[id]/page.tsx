@@ -35,7 +35,7 @@ export default function ClubDetailPage() {
     "feed" | "events" | "leaderboard" | "members"
   >("feed");
   const [isJoined, setIsJoined] = useState(true); // สมมติว่า Join แล้วเพื่อโชว์ฟีเจอร์ภายใน
-  const [isAdmin, setIsAdmin] = useState(true); // สมมติว่าเป็น Admin เพื่อโชว์ปุ่มจัดการ
+  const [isAdmin] = useState(true); // สมมติว่าเป็น Admin เพื่อโชว์ปุ่มจัดการ
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<
     "weekly" | "monthly"
   >("weekly");

@@ -3,11 +3,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, Upload, Users } from "lucide-react";
+import { ChevronLeft, Camera } from "lucide-react";
 import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export default function CreateClubPage() {
-  const { t } = useLanguage();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
