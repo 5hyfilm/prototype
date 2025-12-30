@@ -11,6 +11,9 @@ import { RecordingControlModal } from "@/components/RecordingControlModal";
 import { useRouter } from "next/navigation";
 import { SponsoredSpotlight } from "@/components/SponsoredSpotlight";
 import { sponsoredLocations } from "@/data/sponsored";
+// --- [เพิ่มใหม่] Imports ---
+import { PreRecordingModal } from "@/components/PreRecordingModal";
+import { TRANSPORT_MODES } from "@/data/transportModes";
 
 const Map = dynamic(() => import("@/components/Map").then((mod) => mod.Map), {
   ssr: false,
@@ -25,7 +28,6 @@ export default function MapPage() {
   // --- [GOOSEWAY UPDATE] State สำหรับ Category Filter ---
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // ข้อมูลหมวดหมู่สำหรับแสดงผล (Icon + Label)
   const CATEGORIES = [
     { id: "all", label: t("common.all") || "ทั้งหมด", icon: "🌏" },
     { id: "Restaurant", label: "ร้านอาหาร", icon: "🍳" },
@@ -38,11 +40,11 @@ export default function MapPage() {
     { id: "Public Transport", label: "ขนส่ง", icon: "🚆" },
   ];
 
-  // --- [เพิ่มใหม่] State สำหรับ Spotlight Advertising System ---
+  // --- [Spotlight Advertising System] ---
   const [showSpotlight, setShowSpotlight] = useState(false);
   const [hasShownSpotlight, setHasShownSpotlight] = useState(false);
 
-  // Recording state
+  // --- [Recording State] ---
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -52,35 +54,34 @@ export default function MapPage() {
   const [recordingInterval, setRecordingInterval] =
     useState<NodeJS.Timeout | null>(null);
 
-  // --- [เพิ่มใหม่] Effect สำหรับเปิด Spotlight อัตโนมัติเมื่อเข้าหน้า Map ---
+  // --- [เพิ่มใหม่] State สำหรับ Pre-recording Setup ---
+  const [showPreRecordingModal, setShowPreRecordingModal] = useState(false);
+  const [selectedTransportMode, setSelectedTransportMode] =
+    useState("manual_wheelchair"); // Default
+
+  // Effect เปิด Spotlight
   useEffect(() => {
-    // หน่วงเวลา 1.5 วินาที เพื่อให้ผู้ใช้เห็นแผนที่ก่อน แล้วค่อยเด้งโฆษณา
     const timer = setTimeout(() => {
       if (!hasShownSpotlight) {
         setShowSpotlight(true);
-        setHasShownSpotlight(true); // ป้องกันไม่ให้เด้งซ้ำในการใช้งานครั้งนี้ (Optional)
+        setHasShownSpotlight(true);
       }
     }, 1500);
-
     return () => clearTimeout(timer);
   }, [hasShownSpotlight]);
 
-  // Cleanup interval on unmount
+  // Cleanup interval
   useEffect(() => {
     return () => {
-      if (recordingInterval) {
-        clearInterval(recordingInterval);
-      }
+      if (recordingInterval) clearInterval(recordingInterval);
     };
   }, [recordingInterval]);
 
-  // Timer logic for recording
+  // Timer logic
   useEffect(() => {
     if (isRecording && !isPaused) {
       const interval = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
-
-        // Simulate getting current location and adding to path
         if (typeof window !== "undefined" && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -91,7 +92,6 @@ export default function MapPage() {
           );
         }
       }, 1000);
-
       setRecordingInterval(interval);
       return () => clearInterval(interval);
     } else if (recordingInterval) {
@@ -104,31 +104,35 @@ export default function MapPage() {
     setSearchQuery(query);
     if (query.trim()) {
       setShowSearchNotification(true);
-      setTimeout(() => {
-        setShowSearchNotification(false);
-      }, 3000);
+      setTimeout(() => setShowSearchNotification(false), 3000);
     }
   };
 
-  // --- [GOOSEWAY UPDATE] Handle Category Click ---
   const handleCategorySelect = (id: string) => {
     if (selectedCategory === id && id !== "all") {
-      setSelectedCategory("all"); // กดซ้ำเพื่อยกเลิก
+      setSelectedCategory("all");
     } else {
       setSelectedCategory(id);
     }
   };
 
-  // Record route controls
-  const startRecording = useCallback(() => {
-    setIsRecording(true);
+  // --- [GOOSEWAY UPDATE] Logic ใหม่สำหรับการเริ่มบันทึก ---
+
+  // 1. ฟังก์ชันเปิด Modal เตรียมพร้อม (ยังไม่เริ่มอัด)
+  const openRecordingSetup = useCallback(() => {
+    setShowPreRecordingModal(true);
+  }, []);
+
+  // 2. ฟังก์ชันเริ่มบันทึกจริง (กด Start จาก Modal)
+  const startActualRecording = useCallback(() => {
+    setShowPreRecordingModal(false); // ปิด Modal
+    setIsRecording(true); // เริ่มบันทึก
     setIsPaused(false);
     setRecordingTime(0);
     setRecordedPath([]);
   }, []);
 
   const pauseRecording = useCallback(() => {
-    // ไม่แสดง Modal สำหรับ Pause - ทำงานทันที
     setIsPaused(true);
   }, []);
 
@@ -136,30 +140,25 @@ export default function MapPage() {
     setIsPaused(false);
   }, []);
 
-  // แสดง Modal ยืนยันการหยุดบันทึก
   const confirmStopRecording = useCallback(() => {
     setModalMode("stop");
     setShowRecordingModal(true);
   }, []);
 
-  // ฟังก์ชันสำหรับบันทึกเส้นทางและไปยังหน้าบันทึกข้อมูล
+  // ฟังก์ชันหยุดบันทึกและเซฟ
   const stopRecording = useCallback(() => {
-    // บันทึกข้อมูลเส้นทางลง localStorage เพื่อส่งต่อไปหน้าถัดไป
     if (recordedPath.length > 0) {
-      // คำนวณระยะทางอย่างง่าย
       let distance = 0;
+      // ... (คำนวณ distance เหมือนเดิม) ...
       if (typeof window !== "undefined") {
         for (let i = 1; i < recordedPath.length; i++) {
-          // ใช้ Haversine formula สำหรับคำนวณระยะทางบนพื้นผิวโลก
           const lat1 = (recordedPath[i - 1][0] * Math.PI) / 180;
           const lat2 = (recordedPath[i][0] * Math.PI) / 180;
           const lon1 = (recordedPath[i - 1][1] * Math.PI) / 180;
           const lon2 = (recordedPath[i][1] * Math.PI) / 180;
-
-          const R = 6371e3; // รัศมีของโลกในหน่วยเมตร
+          const R = 6371e3;
           const dLat = lat2 - lat1;
           const dLon = lon2 - lon1;
-
           const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(lat1) *
@@ -167,17 +166,16 @@ export default function MapPage() {
               Math.sin(dLon / 2) *
               Math.sin(dLon / 2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const d = R * c;
-
-          distance += d;
+          distance += R * c;
         }
       }
 
       const routeData = {
         path: recordedPath,
-        startTime: Date.now() - recordingTime * 1000, // คำนวณเวลาเริ่มต้นย้อนกลับ
+        startTime: Date.now() - recordingTime * 1000,
         endTime: Date.now(),
         distance: distance,
+        transportMode: selectedTransportMode, // **เพิ่ม: บันทึกประเภทพาหนะไปด้วย**
       };
 
       if (typeof window !== "undefined") {
@@ -187,11 +185,8 @@ export default function MapPage() {
       setIsRecording(false);
       setIsPaused(false);
       setShowRecordingModal(false);
-
-      // ไปยังหน้าบันทึกข้อมูลเส้นทาง
       router.push("/save-route");
     } else {
-      // ถ้าไม่มีข้อมูลเส้นทาง
       if (typeof window !== "undefined") {
         alert(t("route.recording.no.data") || "ไม่มีข้อมูลเส้นทางที่บันทึก");
       }
@@ -199,62 +194,47 @@ export default function MapPage() {
       setIsPaused(false);
       setShowRecordingModal(false);
     }
-  }, [recordedPath, recordingTime, router, t]);
+  }, [recordedPath, recordingTime, router, t, selectedTransportMode]);
 
-  // ฟังก์ชันสำหรับยกเลิกการบันทึกเส้นทาง (ไม่บันทึกข้อมูล)
   const discardRecording = useCallback(() => {
-    // ล้างข้อมูลและหยุดการบันทึก แต่ไม่ไปหน้าบันทึกข้อมูล
     setIsRecording(false);
     setIsPaused(false);
     setRecordingTime(0);
     setRecordedPath([]);
     setShowRecordingModal(false);
-
-    // อาจจะเพิ่มการแจ้งเตือนที่นี่ถ้าต้องการ
     console.log("Recording discarded");
   }, []);
 
-  // การจัดการกับการปิดไม่ว่าจะเป็นจากปุ่ม X หรือบริเวณอื่น
   const handleCloseRecording = useCallback(() => {
-    // กรณีปิดการบันทึก ให้แสดง Modal ยืนยัน
     setModalMode("cancel");
     setShowRecordingModal(true);
   }, []);
 
-  // กรณีกดยกเลิก Modal ยืนยันการหยุดบันทึก
   const handleCancelStopModal = useCallback(() => {
     setShowRecordingModal(false);
   }, []);
 
-  // This function is called from the ActionMenu component
+  // Listen for ActionMenu event
   useEffect(() => {
-    // Listen for custom event from ActionMenu for recording
     if (typeof window !== "undefined") {
-      const handleStartRecording = () => {
-        startRecording();
+      const handleStartEvent = () => {
+        openRecordingSetup(); // เปลี่ยนจาก startRecording เป็น openRecordingSetup
       };
 
-      window.addEventListener("start-route-recording", handleStartRecording);
-
+      window.addEventListener("start-route-recording", handleStartEvent);
       return () => {
-        window.removeEventListener(
-          "start-route-recording",
-          handleStartRecording
-        );
+        window.removeEventListener("start-route-recording", handleStartEvent);
       };
     }
-  }, [startRecording]);
+  }, [openRecordingSetup]);
 
   return (
     <div className="h-[calc(100vh-64px)] relative">
-      {/* --- [GOOSEWAY UPDATE] Search Bar & Categories Wrapper --- */}
+      {/* ... (Search Bar & Categories code remains same) ... */}
       <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col gap-3 pointer-events-none">
-        {/* 1. Search Bar */}
         <div className="pointer-events-auto shadow-sm">
           <MapSearchBar onSearch={handleSearch} />
         </div>
-
-        {/* 2. Category Pills (Horizontal Scroll) */}
         <div
           className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide pointer-events-auto"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -263,14 +243,11 @@ export default function MapPage() {
             <button
               key={cat.id}
               onClick={() => handleCategorySelect(cat.id)}
-              className={`
-                 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shadow-md border
-                 ${
-                   selectedCategory === cat.id
-                     ? "bg-blue-600 text-white border-blue-600 scale-105" // Active State
-                     : "bg-white text-gray-700 border-gray-100 hover:bg-gray-50" // Inactive State
-                 }
-               `}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shadow-md border ${
+                selectedCategory === cat.id
+                  ? "bg-blue-600 text-white border-blue-600 scale-105"
+                  : "bg-white text-gray-700 border-gray-100 hover:bg-gray-50"
+              }`}
             >
               <span className="text-lg">{cat.icon}</span>
               <span>{cat.label}</span>
@@ -279,7 +256,6 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Notification (ปรับตำแหน่งลงมาเป็น top-36 เพื่อหลบปุ่มหมวดหมู่) */}
       {showSearchNotification && (
         <div className="absolute top-36 left-4 right-4 bg-blue-50 border border-blue-200 rounded-lg p-3 z-[1000] flex items-center shadow-md animate-fade-in">
           <Info className="text-blue-500 mr-2 flex-shrink-0" size={20} />
@@ -289,7 +265,16 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Recording Indicator แบบปรับปรุงแล้ว */}
+      {/* --- [เพิ่มใหม่] Modal เลือกประเภท --- */}
+      <PreRecordingModal
+        isOpen={showPreRecordingModal}
+        onClose={() => setShowPreRecordingModal(false)}
+        onStart={startActualRecording}
+        selectedMode={selectedTransportMode}
+        onModeSelect={setSelectedTransportMode}
+      />
+
+      {/* --- Recording UI --- */}
       <RecordingIndicator
         isRecording={isRecording}
         isPaused={isPaused}
@@ -300,31 +285,28 @@ export default function MapPage() {
         onClose={handleCloseRecording}
       />
 
-      {/* Recording Control Modal แก้ไขให้มี onDiscard */}
       <RecordingControlModal
         isOpen={showRecordingModal}
         onStop={stopRecording}
         onCancel={handleCancelStopModal}
-        onDiscard={discardRecording} // เพิ่ม prop onDiscard
+        onDiscard={discardRecording}
         mode={modalMode}
       />
 
-      {/* --- [เพิ่มใหม่] Sponsored Spotlight Panel --- */}
       <SponsoredSpotlight
         isOpen={showSpotlight}
         onClose={() => setShowSpotlight(false)}
         locations={sponsoredLocations}
       />
-      {/* ------------------------------------------- */}
 
-      {/* Map Component */}
       <div className="w-full h-full">
         <Map
           searchQuery={searchQuery}
-          // @ts-expect-error: กรุณาอัปเดต Map.tsx ให้รับ prop 'category' เพิ่มเติม
           category={selectedCategory}
           recordedPath={isRecording ? recordedPath : []}
           isRecording={isRecording}
+          // --- [สำคัญ] ส่ง transportMode ไปที่ Map เพื่อเปลี่ยนสีเส้น ---
+          transportMode={selectedTransportMode}
         />
       </div>
     </div>

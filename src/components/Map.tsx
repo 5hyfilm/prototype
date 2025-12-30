@@ -24,6 +24,8 @@ import { NearbyAccessibleLocations } from "./NearbyAccessibleLocations";
 import { locationService } from "@/services/locationService";
 import { Location } from "@/lib/types/location";
 import { sampleRoutes } from "@/data/routes";
+// --- [เพิ่มใหม่] Import ข้อมูลสีประเภทการเดินทาง ---
+import { TRANSPORT_MODES } from "@/data/transportModes";
 
 // Fix Leaflet icon issue in Next.js
 const icon = L.icon({
@@ -61,8 +63,10 @@ const recordingCurrentIcon = L.divIcon({
 interface MapProps {
   routePath?: [number, number][];
   searchQuery?: string;
-  recordedPath?: [number, number][]; // เพิ่มเส้นทางที่กำลังบันทึก
-  isRecording?: boolean; // เพิ่มสถานะกำลังบันทึก
+  recordedPath?: [number, number][]; // เส้นทางที่กำลังบันทึก
+  isRecording?: boolean; // สถานะกำลังบันทึก
+  transportMode?: string; // [เพิ่มใหม่] ประเภทพาหนะสำหรับกำหนดสีเส้น
+  category?: string; // หมวดหมู่ (ถ้ามีการใช้งานในอนาคต)
 }
 
 // Location Button Component for current location
@@ -168,6 +172,7 @@ export function Map({
   searchQuery,
   recordedPath = [],
   isRecording = false,
+  transportMode = "manual_wheelchair", // ค่าเริ่มต้น
 }: MapProps) {
   const { t } = useLanguage();
   const defaultPosition = L.latLng(13.7466, 100.5347); // Siam area
@@ -212,27 +217,31 @@ export function Map({
     }
   }, [routePath, t]);
 
-  // เพิ่มการแสดงเส้นทางที่กำลังบันทึก
+  // --- [GOOSEWAY UPDATE] Logic แสดงเส้นทางที่กำลังบันทึกพร้อมสีตามประเภท ---
   useEffect(() => {
     if (recordedPath.length > 0 && isRecording) {
-      // แสดงเส้นทางที่กำลังบันทึกด้วยสีแดง
+      // 1. หาข้อมูลสีจาก transportMode
+      const modeData = TRANSPORT_MODES.find((m) => m.id === transportMode);
+      const strokeColor = modeData ? modeData.color : "#ef4444"; // สี Default (แดง)
+
+      // 2. สร้าง Object เส้นทาง
       const recordingRoute = {
         id: 9999,
         accessibility: "high",
-        color: "#ef4444", // สีแดง
+        color: strokeColor, // ใช้สีตามประเภทที่เลือก
         path: recordedPath,
         name: t("map.recording.route") || "กำลังบันทึกเส้นทาง",
         description: t("map.recording.in.progress") || "กำลังบันทึกเส้นทาง",
       };
 
-      // เพิ่มเส้นทางที่กำลังบันทึกเข้าไปในรายการเส้นทาง
+      // 3. อัปเดต state ของเส้นทาง
       setActiveRoutes((prevRoutes) => {
-        // กรองเส้นทางบันทึกออกก่อน (ถ้ามี)
+        // กรองเส้นทาง recording เก่าออกก่อน (ถ้ามี) แล้วใส่เส้นใหม่เข้าไป
         const filteredRoutes = prevRoutes.filter((route) => route.id !== 9999);
         return [...filteredRoutes, recordingRoute];
       });
     }
-  }, [recordedPath, isRecording, t]);
+  }, [recordedPath, isRecording, transportMode, t]); // ใส่ transportMode ใน dependency array
 
   // Handle search query from parent
   useEffect(() => {
@@ -344,17 +353,19 @@ export function Map({
         {/* เพิ่มคอมโพเนนต์ InitialLocationFinder เพื่อให้เริ่มที่ตำแหน่งปัจจุบัน */}
         <InitialLocationFinder />
 
-        {/* Routes - เพิ่มเงื่อนไขการแสดงผล */}
+        {/* Routes - วาดเส้นทางบนแผนที่ */}
         {showRoutes &&
           activeRoutes.map((route) => (
             <Polyline
               key={route.id}
               positions={route.path as L.LatLngExpression[]}
               pathOptions={{
-                color: route.id === 9999 ? "#ef4444" : "#15803d", // สีแดงสำหรับเส้นทางที่กำลังบันทึก
+                // ใช้สีจาก object route โดยตรง (เพราะเราคำนวณไว้ใน state แล้ว)
+                color: route.color,
                 weight: 6,
                 opacity: 0.8,
-                dashArray: route.id === 9999 ? "10, 5" : undefined, // สร้างเส้นประสำหรับเส้นทางที่กำลังบันทึก
+                // สร้างเส้นประถ้าเป็นเส้นทางที่กำลังบันทึก (ID 9999)
+                dashArray: route.id === 9999 ? "10, 5" : undefined,
               }}
             ></Polyline>
           ))}
