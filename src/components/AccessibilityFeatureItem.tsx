@@ -61,40 +61,55 @@ export const AccessibilityFeatureItem = ({
   const isDislikeHighest = dislike === maxCount && dislike > 0;
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-white p-4">
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-base text-gray-700">{t(translationKey)}</label>
-        <div className="flex rounded-lg overflow-hidden border border-gray-200">
+    <div className="border rounded-lg overflow-hidden bg-white p-4 shadow-sm">
+      {/* ส่วนหัวข้อ (Title) แยกออกมาด้านบน */}
+      <div className="mb-3">
+        <label className="text-base font-medium text-gray-900">
+          {t(translationKey)}
+        </label>
+      </div>
+
+      {/* Action Row: โหวตด้านซ้าย - รูปภาพด้านขวา */}
+      <div className="flex items-center justify-between">
+        {/* 👈 ฝั่งซ้าย: ปุ่มโหวต (Like/Dislike) */}
+        <div className="flex rounded-lg overflow-hidden border border-gray-200 shadow-sm">
           <div
-            className={`px-4 py-1.5 flex items-center gap-1 ${
-              isLikeHighest ? "bg-green-100 text-green-700" : "text-gray-400"
+            className={`px-4 py-1.5 flex items-center gap-1 transition-colors ${
+              isLikeHighest
+                ? "bg-green-100 text-green-700"
+                : "bg-white text-gray-500"
             }`}
           >
             <ThumbsUp className="w-4 h-4" />
-            <span className="text-xs">{like}</span>
+            <span className="text-xs font-medium">{like}</span>
           </div>
           <div
-            className={`px-4 py-1.5 border-l border-gray-200 flex items-center gap-1 ${
-              isDislikeHighest ? "bg-red-100 text-red-700" : "text-gray-400"
+            className={`px-4 py-1.5 border-l border-gray-200 flex items-center gap-1 transition-colors ${
+              isDislikeHighest
+                ? "bg-red-100 text-red-700"
+                : "bg-white text-gray-500"
             }`}
           >
             <ThumbsDown className="w-4 h-4" />
-            <span className="text-xs">{dislike}</span>
+            <span className="text-xs font-medium">{dislike}</span>
           </div>
         </div>
+
+        {/* 👉 ฝั่งขวา: ปุ่มดูรูปภาพ (แสดงเฉพาะเมื่อมีรูป) */}
+        {filteredImages.length > 0 && (
+          <button
+            onClick={() => setShowPhotos(true)}
+            className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full transition-all active:scale-95"
+          >
+            <Image className="w-4 h-4" />
+            <span>
+              {t("location.view.photos", { count: filteredImages.length }) ||
+                `ดูรูป (${filteredImages.length})`}
+            </span>
+          </button>
+        )}
       </div>
-      {filteredImages.length > 0 && (
-        <button
-          onClick={() => setShowPhotos(true)}
-          className="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-        >
-          <Image className="w-4 h-4" />
-          <span>
-            {t("location.view.photos", { count: filteredImages.length }) ||
-              `ดู ${filteredImages.length} รูปภาพ`}
-          </span>
-        </button>
-      )}
+
       {showPhotos && (
         <PhotoViewer
           images={filteredImages}
