@@ -121,6 +121,9 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Community
     "community.search": "Search here...",
+    "community.tab.feed": "Feed",
+    "community.tab.events": "Events",
+    "community.tab.clubs": "Clubs",
     "community.categories.all": "All",
     "community.categories.guides": "Guides & Tips",
     "community.categories.equipment": "Equipment Reviews",
@@ -1108,6 +1111,9 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Community
     "community.search": "ค้นหาที่นี่...",
+    "community.tab.feed": "ฟีด",
+    "community.tab.events": "กิจกรรม",
+    "community.tab.clubs": "ชมรม",
     "community.categories.all": "ทั้งหมด",
     "community.categories.guides": "คู่มือและเคล็ดลับ",
     "community.categories.equipment": "รีวิวอุปกรณ์",
