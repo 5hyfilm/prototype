@@ -121,6 +121,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Community
     "community.search": "Search here...",
+    "community.search.placeholder": "Search here...",
     "community.tab.feed": "Feed",
     "community.tab.events": "Events",
     "community.tab.clubs": "Clubs",
@@ -1111,6 +1112,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Community
     "community.search": "ค้นหาที่นี่...",
+    "community.search.placeholder": "ค้นหาที่นี่...",
     "community.tab.feed": "ฟีด",
     "community.tab.events": "กิจกรรม",
     "community.tab.clubs": "ชมรม",
