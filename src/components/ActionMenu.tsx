@@ -1,14 +1,24 @@
 // src/components/ActionMenu.tsx
+
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Navigation, AlertTriangle, PenSquare } from "lucide-react";
-import { useRouter } from "next/navigation";
+// [GOOSEWAY] เพิ่ม MapPin icon
+import {
+  Plus,
+  X,
+  Navigation,
+  AlertTriangle,
+  PenSquare,
+  MapPin,
+} from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function ActionMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useLanguage();
 
   const toggleMenu = () => {
@@ -22,18 +32,21 @@ export default function ActionMenu() {
         router.push("/report-obstacle");
         break;
       case "route":
-        // Instead of redirecting, dispatch a custom event to start recording
         window.dispatchEvent(new Event("start-route-recording"));
         break;
       case "post":
         router.push("/add-post");
+        break;
+      // [GOOSEWAY] เพิ่ม Case ใหม่: เข้าโหมด Add Location
+      case "add-location":
+        // ส่ง parameter mode=add_location ไปที่หน้า Map
+        router.push("/map?mode=add_location");
         break;
     }
   };
 
   return (
     <>
-      {/* Main button */}
       <div className="relative pointer-events-auto">
         <button
           onClick={toggleMenu}
@@ -44,12 +57,20 @@ export default function ActionMenu() {
           {isOpen ? <X size={24} /> : <Plus size={24} />}
         </button>
 
-        {/* Menu items */}
         {isOpen && (
           <div
             className="absolute bottom-16 -left-20 flex flex-col gap-2 items-center w-64 animate-fade-in"
             style={{ zIndex: 1002 }}
           >
+            {/* [GOOSEWAY] ปุ่มใหม่: เพิ่มสถานที่ (เอาไว้บนสุดให้กดง่าย) */}
+            <button
+              onClick={() => handleAction("add-location")}
+              className="w-full bg-white text-green-600 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 hover:bg-green-50 transition-colors"
+            >
+              <MapPin size={20} />
+              <span>{t("action.add.location") || "เพิ่มสถานที่"}</span>
+            </button>
+
             <button
               onClick={() => handleAction("route")}
               className="w-full bg-white text-blue-600 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 hover:bg-blue-50 transition-colors"
@@ -76,7 +97,6 @@ export default function ActionMenu() {
           </div>
         )}
 
-        {/* Backdrop */}
         {isOpen && (
           <div
             className="fixed inset-0 bg-black/20"
