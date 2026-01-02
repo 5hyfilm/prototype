@@ -12,6 +12,7 @@ import {
   useMapEvents,
   Polyline,
 } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster"; // ✅ Import Clustering
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Crosshair, Search, X, Route, EyeOff, Plus } from "lucide-react";
@@ -90,6 +91,40 @@ const bluePlusIcon = L.divIcon({
   iconAnchor: [16, 16],
   popupAnchor: [0, -20],
 });
+
+// --- ✅ Custom Cluster Icon (Option 1: Blue Theme) ---
+// ฟังก์ชันสร้าง Icon วงกลมสีน้ำเงินพร้อมตัวเลขข้างใน
+const createClusterCustomIcon = function (cluster: any) {
+  const count = cluster.getChildCount();
+  // ปรับขนาดวงกลมตามจำนวน (เล็ก/กลาง/ใหญ่)
+  let size = 40;
+  if (count > 10) size = 50;
+  if (count > 50) size = 60;
+
+  return L.divIcon({
+    html: `
+      <div style="
+        background-color: #2563eb; 
+        width: ${size}px; 
+        height: ${size}px; 
+        border-radius: 50%; 
+        color: white; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-weight: bold; 
+        font-family: sans-serif; 
+        font-size: 16px;
+        border: 3px solid white; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      ">
+        ${count}
+      </div>
+    `,
+    className: "custom-marker-cluster",
+    iconSize: L.point(size, size, true),
+  });
+};
 
 // --- Types ---
 
@@ -569,14 +604,22 @@ export function Map({
           </div>
         )}
 
-        {/* Static Data Markers */}
-        {accessibleLocations.map((location) => (
-          <LocationMarker key={location.id} location={location} />
-        ))}
+        {/* ✅ WRAPPED IN CLUSTER GROUP */}
+        <MarkerClusterGroup
+          chunkedLoading
+          iconCreateFunction={createClusterCustomIcon}
+          maxClusterRadius={40} // ระยะห่างในการรวมกลุ่ม
+          spiderfyOnMaxZoom={true} // แตกตัวเมื่อซูมสุด
+        >
+          {/* Static Data Markers */}
+          {accessibleLocations.map((location) => (
+            <LocationMarker key={location.id} location={location} />
+          ))}
 
-        {sampleObstacles.map((obstacle) => (
-          <ObstacleMarker key={obstacle.id} obstacle={obstacle} />
-        ))}
+          {sampleObstacles.map((obstacle) => (
+            <ObstacleMarker key={obstacle.id} obstacle={obstacle} />
+          ))}
+        </MarkerClusterGroup>
 
         {/* Search Result Marker */}
         {searchPosition && (
