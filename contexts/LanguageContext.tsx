@@ -353,7 +353,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.sort.highest": "Highest Rating",
     "reviews.sort.lowest": "Lowest Rating",
     "reviews.sort.most.liked": "Most Liked",
-    "reviews.written.title": "Written Reviews",
+    "reviews.written.title": "Reviews",
     "reviews.written.count": "written reviews",
     "reviews.count": "reviews",
 

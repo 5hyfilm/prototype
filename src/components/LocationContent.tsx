@@ -3,20 +3,18 @@
 
 import { useState, useEffect } from "react";
 import {
-  Star,
   Clock,
   Image as ImageIcon,
   ExternalLink,
   Ticket,
   LayoutList,
   Plane,
-  MessageSquare, // เพิ่มไอคอนสำหรับ Tab Reviews
+  MessageSquare,
 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { AccessibilityFeatureItem } from "./AccessibilityFeatureItem";
 import { hasRecentData, getCategoryIcon } from "../../utils/locationUtils";
 import { ReviewModal } from "./ReviewModal";
-// 👇 Import ReviewList เข้ามาใช้งานใน Tab ใหม่
 import { ReviewList } from "./ReviewList";
 import type { Location } from "@/lib/types/location";
 
@@ -24,7 +22,6 @@ interface LocationContentProps {
   location: Location;
 }
 
-// 👇 เพิ่ม 'reviews' เข้าไปใน TabType
 type TabType = "overview" | "reviews" | "booking";
 
 export function LocationContent({ location }: LocationContentProps) {
@@ -64,16 +61,7 @@ export function LocationContent({ location }: LocationContentProps) {
 
   const handleReviewClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // ถ้าจะเขียนรีวิว อาจจะยังใช้ Modal หรือไปหน้าเขียนรีวิว
-    // ในที่นี้ถ้ากดเขียนรีวิว ให้เปิด Modal เหมือนเดิม หรือจะนำทางไปหน้าอื่นก็ได้
-    // window.location.href = `/review/${location.id}`; // แบบเดิม
-    setIsReviewModalOpen(true); // เปิด Modal เขียนรีวิว
-  };
-
-  // 👇 ปรับให้กดแล้วย้ายไป Tab Reviews แทน
-  const handleViewReviews = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setActiveTab("reviews");
+    setIsReviewModalOpen(true);
   };
 
   const translateCategory = (category: string) => {
@@ -101,7 +89,7 @@ export function LocationContent({ location }: LocationContentProps) {
 
   return (
     <div className="flex flex-col min-h-full pb-6">
-      {/* 🖼️ ส่วนหัว (แสดงตลอดเหมือนเดิม) */}
+      {/* 🖼️ ส่วนหัว (แสดงตลอด) */}
       <div className="space-y-4 mb-4">
         <div className="relative w-full h-48 rounded-xl overflow-hidden shadow-sm bg-gray-200 flex items-center justify-center border border-gray-100 shrink-0">
           {location.image ? (
@@ -151,7 +139,7 @@ export function LocationContent({ location }: LocationContentProps) {
         </div>
       </div>
 
-      {/* 🟢 TABS NAVIGATION (ปรับปรุงใหม่) */}
+      {/* 🟢 TABS NAVIGATION */}
       <div className="flex border-b border-gray-200 mb-4 sticky top-0 bg-white z-10 -mx-4 px-4 pt-2">
         <button
           onClick={() => setActiveTab("overview")}
@@ -163,10 +151,10 @@ export function LocationContent({ location }: LocationContentProps) {
             }`}
         >
           <LayoutList className="w-4 h-4" />
-          {t("location.tab.overview") || "Overview"}
+          {/* ใช้คำว่า "สิ่งอำนวยฯ" หรือ "Facilities" ตามที่ตกลงกัน */}
+          {t("location.tab.overview") || "Facilities"}
         </button>
 
-        {/* 👇 เพิ่ม Tab Reviews */}
         <button
           onClick={() => setActiveTab("reviews")}
           className={`flex-1 pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center justify-center gap-2
@@ -198,7 +186,7 @@ export function LocationContent({ location }: LocationContentProps) {
 
       {/* 🟡 CONTENT AREA */}
 
-      {/* 1. Tab Overview (เหลือแค่ Facility และ Description) */}
+      {/* 1. Tab Facilities (Overview) - Clean Version */}
       {activeTab === "overview" && (
         <div className="space-y-4 animate-in fade-in duration-300">
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -207,17 +195,8 @@ export function LocationContent({ location }: LocationContentProps) {
             </p>
           </div>
 
-          <div className="flex justify-between items-center pt-2">
-            {/* 👇 ปุ่มนี้กดแล้วจะย้ายไป Tab Reviews */}
-            <button
-              onClick={handleViewReviews}
-              className="text-blue-600 text-sm flex items-center gap-1 hover:underline font-medium"
-            >
-              <Star className="w-4 h-4" />
-              <span>
-                {t("common.view.written.reviews") || "See all reviews"}
-              </span>
-            </button>
+          {/* Time Filter Only (No buttons) */}
+          <div className="flex justify-end items-center pt-2">
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setTimeFilter("recent")}
@@ -254,40 +233,30 @@ export function LocationContent({ location }: LocationContentProps) {
               />
             ))}
           </div>
-
-          {/* ปุ่มเขียนรีวิวอาจจะยังคงไว้ในหน้าแรก เพื่อความสะดวก */}
-          <button
-            onClick={handleReviewClick}
-            className="w-full bg-white border-2 border-blue-600 text-blue-600 px-4 py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-50 font-semibold mt-4"
-          >
-            <Star className="w-5 h-5" />
-            <span>{t("common.write.review") || "Write a Review"}</span>
-          </button>
         </div>
       )}
 
-      {/* 2. Tab Reviews (มาใหม่ ✨) */}
+      {/* 2. Tab Reviews */}
       {activeTab === "reviews" && (
         <div className="space-y-4 animate-in fade-in duration-300">
-          {/* แสดงปุ่มเขียนรีวิวด้วยเพื่อให้ User ไม่ต้องกลับไปหน้า Overview */}
+          {/* Header + Write Review Button */}
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-bold text-gray-900">
               {t("reviews.written.title") || "Written Reviews"}
             </h4>
             <button
               onClick={handleReviewClick}
-              className="text-sm text-blue-600 font-medium hover:underline"
+              className="text-sm text-blue-600 font-medium hover:underline bg-blue-50 px-3 py-1.5 rounded-full"
             >
-              + {t("common.write.review") || "Write"}
+              + {t("common.write.review") || "Write Review"}
             </button>
           </div>
 
-          {/* เรียกใช้ ReviewList ตรงๆ */}
           <ReviewList locationId={location.id} showWrittenOnly={true} />
         </div>
       )}
 
-      {/* 3. Tab Booking (เหมือนเดิม) */}
+      {/* 3. Tab Booking */}
       {activeTab === "booking" && hasBooking && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-3">
