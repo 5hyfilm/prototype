@@ -371,6 +371,9 @@ const translations: Record<Language, Record<string, string>> = {
     "location.phone": "Phone",
     "location.website": "Website",
     "location.hours": "Opening Hours",
+    "location.tab.overview": "Facilities",
+    "location.tab.booking": "Booking",
+    // "reviews.written.title": "Reviews",
 
     // Accessibility Statement
     "accessibility.statement": "ถ้อยแถลงการเข้าถึง",
@@ -983,6 +986,10 @@ const translations: Record<Language, Record<string, string>> = {
     "map.accessible.parking": "ที่จอดรถที่เข้าถึงได้",
     "map.elevator": "ลิฟต์",
     "map.ramp": "ทางลาด",
+    // ในหมวด location หรือเพิ่มต่อท้าย
+    "location.tab.overview": "สิ่งอำนวยฯ", // หรือ "ข้อมูลทั่วไป" ก็ได้ครับ แต่ "ภาพรวม" จะดู Modern กว่า
+    "location.tab.booking": "จองบริการ", // ใช้ "จองบริการ" ให้ดูครอบคลุมทั้งรถ/โรงแรม หรือใช้แค่ "จอง" ก็ได้ถ้าที่แคบ
+    "reviews.written.title": "รีวิว", // สั้นๆ ได้ใจความ หรือ "รีวิวจากผู้ใช้"
 
     // Accessibility Features
     "review.feature.parking": "ที่จอดรถ",
@@ -1369,7 +1376,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.sort.highest": "คะแนนสูงสุด",
     "reviews.sort.lowest": "คะแนนต่ำสุด",
     "reviews.sort.most.liked": "ถูกใจมากที่สุด",
-    "reviews.written.title": "รีวิวแบบข้อความ",
+    // "reviews.written.title": "รีวิวแบบข้อความ",
     "reviews.written.count": "รีวิวแบบข้อความ",
     "reviews.count": "รีวิว",
 
