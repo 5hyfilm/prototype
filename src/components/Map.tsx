@@ -12,11 +12,17 @@ import {
   useMapEvents,
   Polyline,
 } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster"; // ✅ Import Clustering
+import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Crosshair, Search, X, Route, EyeOff, Plus } from "lucide-react";
-// Import Router hooks สำหรับจัดการ URL และ Mode
+import {
+  Crosshair,
+  Search,
+  X,
+  Plus,
+  Layers, // ✅ ไอคอนใหม่สำหรับปุ่มรวม
+  CheckCircle2,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { LocationMarker } from "./LocationMarker";
@@ -30,8 +36,6 @@ import { sampleRoutes } from "@/data/routes";
 import { TRANSPORT_MODES } from "@/data/transportModes";
 
 // --- Icons Definition ---
-
-// Fix Leaflet icon issue in Next.js
 const icon = L.icon({
   iconUrl: "/image/gps.png",
   iconSize: [41, 41],
@@ -40,7 +44,6 @@ const icon = L.icon({
   shadowSize: [41, 41],
 });
 
-// Marker สำหรับผลการค้นหา
 const searchResultIcon = L.icon({
   iconUrl: "/image/search-pin.svg",
   iconSize: [35, 35],
@@ -48,7 +51,6 @@ const searchResultIcon = L.icon({
   popupAnchor: [0, -35],
 });
 
-// Marker จุดเริ่มต้นการบันทึก
 const recordingStartIcon = L.divIcon({
   className: "recording-start-marker",
   html: `<div style="width: 14px; height: 14px; background-color: #ef4444; border-radius: 50%; border: 3px solid white;"></div>`,
@@ -56,7 +58,6 @@ const recordingStartIcon = L.divIcon({
   iconAnchor: [7, 7],
 });
 
-// Marker จุดปัจจุบันของการบันทึก (มี Animation Pulse)
 const recordingCurrentIcon = L.divIcon({
   className: "recording-current-marker",
   html: `<div style="width: 18px; height: 18px; background-color: #ef4444; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 0 0 4px rgba(239, 68, 68, 0.3); animation: pulse 1.5s infinite;"></div>`,
@@ -64,7 +65,6 @@ const recordingCurrentIcon = L.divIcon({
   iconAnchor: [9, 9],
 });
 
-// [GOOSEWAY] Blue Plus Icon สำหรับโหมด Add Location
 const bluePlusIcon = L.divIcon({
   className: "blue-plus-marker",
   html: `
@@ -92,11 +92,8 @@ const bluePlusIcon = L.divIcon({
   popupAnchor: [0, -20],
 });
 
-// --- ✅ Custom Cluster Icon (Option 1: Blue Theme) ---
-// ฟังก์ชันสร้าง Icon วงกลมสีน้ำเงินพร้อมตัวเลขข้างใน
 const createClusterCustomIcon = function (cluster: any) {
   const count = cluster.getChildCount();
-  // ปรับขนาดวงกลมตามจำนวน (เล็ก/กลาง/ใหญ่)
   let size = 40;
   if (count > 10) size = 50;
   if (count > 50) size = 60;
@@ -127,7 +124,6 @@ const createClusterCustomIcon = function (cluster: any) {
 };
 
 // --- Types ---
-
 interface MapProps {
   routePath?: [number, number][];
   searchQuery?: string;
@@ -147,7 +143,7 @@ interface ScannedPOI {
 
 // --- Sub-components ---
 
-function LocationButton() {
+function LocationButton({ className }: { className?: string }) {
   const { t } = useLanguage();
   const map = useMap();
   const [loading, setLoading] = useState(false);
@@ -170,9 +166,9 @@ function LocationButton() {
     <button
       onClick={handleClick}
       title={t("map.locate.current.location")}
-      className={`absolute right-4 top-20 z-[1000] bg-white p-3 rounded-full shadow-lg
-        ${loading ? "animate-pulse" : ""}`}
-      disabled={loading}
+      className={`bg-white p-3 rounded-full shadow-lg ${
+        loading ? "animate-pulse" : ""
+      } ${className}`}
     >
       <Crosshair size={24} className="text-blue-600" />
     </button>
@@ -240,29 +236,23 @@ function CurrentLocationMarker() {
   );
 }
 
-// [GOOSEWAY] Component จัดการโหมด Add Location
-// ทำหน้าที่สแกนหา POI และแสดง UI สำหรับการเพิ่มสถานที่
 const AddLocationManager = () => {
   const map = useMap();
-  const router = useRouter(); // ใช้ Router เพื่อจัดการการเปลี่ยนหน้า
-  const searchParams = useSearchParams(); // ใช้ SearchParams เพื่อดักจับ URL changes
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [scannedPOIs, setScannedPOIs] = useState<ScannedPOI[]>([]);
   const [modeActive, setModeActive] = useState(false);
 
-  // 1. ตรวจสอบ URL Param: ?mode=add_location
   useEffect(() => {
     const mode = searchParams.get("mode");
     if (mode === "add_location") {
       setModeActive(true);
-      console.log("📍 Add Location Mode: ACTIVATED");
     } else {
       setModeActive(false);
-      setScannedPOIs([]); // เคลียร์หมุดเมื่อออกจากโหมด
-      console.log("📍 Add Location Mode: DEACTIVATED");
+      setScannedPOIs([]);
     }
   }, [searchParams]);
 
-  // ฟังก์ชันสร้าง Mock Data (กรณี API ใช้งานไม่ได้)
   const generateMockPOIs = (center: L.LatLng): ScannedPOI[] => {
     const mocks = [
       { name: "ร้านกาแฟตัวอย่าง (Mock)", type: "cafe" },
@@ -281,7 +271,6 @@ const AddLocationManager = () => {
     }));
   };
 
-  // 2. ฟังก์ชันสแกนหา POI
   const scanArea = useCallback(async () => {
     if (!modeActive) return;
 
@@ -290,11 +279,9 @@ const AddLocationManager = () => {
 
     try {
       const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
-
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=amenity&viewbox=${viewbox}&bounded=1&limit=10&addressdetails=1`
       );
-
       const data = await response.json();
       let newPois: ScannedPOI[] = [];
 
@@ -307,7 +294,6 @@ const AddLocationManager = () => {
           type: item.type,
         }));
       } else {
-        console.warn("⚠️ API returned empty, using mock data");
         newPois = generateMockPOIs(center);
       }
 
@@ -318,20 +304,17 @@ const AddLocationManager = () => {
         return [...prev, ...uniqueNew];
       });
     } catch (error) {
-      console.error("❌ Scan failed, forcing mock data:", error);
       const mocks = generateMockPOIs(center);
       setScannedPOIs((prev) => [...prev, ...mocks]);
     }
   }, [map, modeActive]);
 
-  // 3. Auto Scan เมื่อหยุดเลื่อนแผนที่
   useMapEvents({
     moveend: () => {
       if (modeActive) scanArea();
     },
   });
 
-  // Scan ครั้งแรกเมื่อเข้าโหมด
   useEffect(() => {
     if (modeActive) {
       scanArea();
@@ -342,7 +325,6 @@ const AddLocationManager = () => {
 
   return (
     <>
-      {/* Banner บอกสถานะ พร้อมปุ่มปิด (X) */}
       <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white pl-4 pr-1.5 py-1.5 rounded-full shadow-lg z-[1000] flex items-center gap-3 w-max max-w-[90%] pointer-events-auto">
         <div className="flex items-center gap-2">
           <Plus size={16} className="text-white shrink-0" />
@@ -350,8 +332,6 @@ const AddLocationManager = () => {
             เลือกสถานที่เพื่อเพิ่มข้อมูล
           </span>
         </div>
-
-        {/* ปุ่มปิด: กดแล้วกลับไปหน้า Map ปกติ */}
         <button
           onClick={() => {
             router.push("/map");
@@ -362,7 +342,6 @@ const AddLocationManager = () => {
         </button>
       </div>
 
-      {/* Render หมุดฟ้า (+) */}
       {scannedPOIs.map((poi) => (
         <Marker key={poi.id} position={[poi.lat, poi.lng]} icon={bluePlusIcon}>
           <Popup>
@@ -373,10 +352,8 @@ const AddLocationManager = () => {
               <h3 className="font-bold text-lg mb-3 text-gray-800 leading-tight">
                 {poi.name}
               </h3>
-
               <button
                 onClick={() => {
-                  // ส่งข้อมูลไปหน้าแบบฟอร์ม User (/add-location)
                   window.location.href = `/add-location?lat=${poi.lat}&lng=${
                     poi.lng
                   }&name=${encodeURIComponent(poi.name)}`;
@@ -394,7 +371,6 @@ const AddLocationManager = () => {
   );
 };
 
-// Component ควบคุมการเลื่อนแผนที่ (เช่น เมื่อค้นหาเจอ)
 const MapController = ({
   searchPos,
 }: {
@@ -416,20 +392,21 @@ export function Map({
   searchQuery,
   recordedPath = [],
   isRecording = false,
-  transportMode = "manual_wheelchair", // ค่า Default
+  transportMode = "manual_wheelchair",
 }: MapProps) {
   const { t } = useLanguage();
-  const defaultPosition = L.latLng(13.7466, 100.5347); // Siam area
+  const defaultPosition = L.latLng(13.7466, 100.5347);
   const [position, setPosition] = useState(() => defaultPosition);
 
-  // ✅ [UPDATE] ใช้ Logic เลือกสีจาก TRANSPORT_MODES
-  const [activeRoutes, setActiveRoutes] = useState(() =>
-    sampleRoutes.map((route) => {
-      // ค้นหา Mode ที่ตรงกันจาก id
-      const mode = TRANSPORT_MODES.find((m) => m.id === route.transportMode);
-      // ถ้าไม่เจอ ให้ใช้สีเขียวเป็นค่าเริ่มต้น
-      const color = mode ? mode.color : "#22c55e";
+  // Filter & Visibility States
+  const [filterMode, setFilterMode] = useState<string>("all");
+  const [showRoutes, setShowRoutes] = useState(true);
+  const [isLayersOpen, setIsLayersOpen] = useState(false); // ✅ เปลี่ยนชื่อ state
 
+  const [allRoutes] = useState(() =>
+    sampleRoutes.map((route) => {
+      const mode = TRANSPORT_MODES.find((m) => m.id === route.transportMode);
+      const color = mode ? mode.color : "#22c55e";
       return {
         id: route.id,
         accessibility: "high",
@@ -437,65 +414,47 @@ export function Map({
         path: route.path,
         name: route.title,
         description: route.description,
+        transportMode: route.transportMode,
       };
     })
   );
+
+  const activeRoutes =
+    filterMode === "all"
+      ? allRoutes
+      : allRoutes.filter((r) => r.transportMode === filterMode);
 
   const [searchValue, setSearchValue] = useState("");
   const [showNearbyPanel, setShowNearbyPanel] = useState(false);
   const [searchPosition, setSearchPosition] = useState<[number, number] | null>(
     null
   );
-  const [showRoutes, setShowRoutes] = useState(true);
 
   const toggleRoutesVisibility = useCallback(() => {
     setShowRoutes((prev) => !prev);
   }, []);
 
-  // Effect: เมื่อมีการเลือกเส้นทาง (เช่น จากหน้า Saved Routes)
   useEffect(() => {
     if (routePath.length > 0) {
       const newPosition = L.latLng(routePath[0][0], routePath[0][1]);
       setPosition(newPosition);
-      setActiveRoutes([
-        {
-          id: 999,
+    }
+  }, [routePath]);
+
+  const recordingRoute =
+    isRecording && recordedPath.length > 0
+      ? {
+          id: 9999,
           accessibility: "high",
-          color: "#22c55e",
-          path: routePath,
-          name: t("map.selected.route"),
-          description: t("map.selected.route.description"),
-        },
-      ]);
-    }
-  }, [routePath, t]);
+          color:
+            TRANSPORT_MODES.find((m) => m.id === transportMode)?.color ||
+            "#ef4444",
+          path: recordedPath,
+          name: t("map.recording.route"),
+          description: t("map.recording.in.progress"),
+        }
+      : null;
 
-  // Effect: จัดการเส้นทางที่กำลังบันทึก (Recording Path)
-  useEffect(() => {
-    if (recordedPath.length > 0 && isRecording) {
-      // 1. หาข้อมูลสีตามประเภทพาหนะ
-      const modeData = TRANSPORT_MODES.find((m) => m.id === transportMode);
-      const strokeColor = modeData ? modeData.color : "#ef4444";
-
-      // 2. สร้างเส้นทางชั่วคราว
-      const recordingRoute = {
-        id: 9999,
-        accessibility: "high",
-        color: strokeColor,
-        path: recordedPath,
-        name: t("map.recording.route") || "กำลังบันทึกเส้นทาง",
-        description: t("map.recording.in.progress") || "กำลังบันทึกเส้นทาง",
-      };
-
-      // 3. อัปเดต State
-      setActiveRoutes((prevRoutes) => {
-        const filteredRoutes = prevRoutes.filter((route) => route.id !== 9999);
-        return [...filteredRoutes, recordingRoute];
-      });
-    }
-  }, [recordedPath, isRecording, transportMode, t]);
-
-  // Effect: จัดการ Search Query จาก Parent
   useEffect(() => {
     if (searchQuery) {
       setSearchValue(searchQuery);
@@ -509,7 +468,6 @@ export function Map({
       setShowNearbyPanel(false);
       return;
     }
-
     try {
       const results = await locationService.searchLocations(query);
       if (results.length > 0) {
@@ -530,7 +488,6 @@ export function Map({
 
   return (
     <div className="relative w-full h-full">
-      {/* Panel แสดงสถานที่ใกล้เคียง (ถ้ามีการ Search) */}
       {searchPosition && (
         <NearbyAccessibleLocations
           searchPosition={searchPosition}
@@ -551,15 +508,11 @@ export function Map({
           url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
         />
 
-        {/* --- Managers & Controllers --- */}
         <InitialLocationFinder />
         <MapController searchPos={searchPosition} />
-        {/* [GOOSEWAY] AddLocationManager ถูกเรียกใช้ที่นี่ */}
         <AddLocationManager />
 
-        {/* --- Layers --- */}
-
-        {/* Routes Lines */}
+        {/* Routes Layers */}
         {showRoutes &&
           activeRoutes.map((route) => (
             <Polyline
@@ -569,12 +522,23 @@ export function Map({
                 color: route.color,
                 weight: 6,
                 opacity: 0.8,
-                dashArray: route.id === 9999 ? "10, 5" : undefined,
               }}
             ></Polyline>
           ))}
 
-        {/* Recording Start/Current Markers */}
+        {recordingRoute && (
+          <Polyline
+            key={recordingRoute.id}
+            positions={recordingRoute.path as L.LatLngExpression[]}
+            pathOptions={{
+              color: recordingRoute.color,
+              weight: 6,
+              opacity: 0.8,
+              dashArray: "10, 5",
+            }}
+          />
+        )}
+
         {isRecording && recordedPath.length > 0 && (
           <>
             <Marker
@@ -596,31 +560,132 @@ export function Map({
           </>
         )}
 
-        {/* Toggle Routes Button */}
-        {activeRoutes.length > 0 && (
-          <div className="absolute top-36 right-4 z-[1000]">
+        {/* ✅ [UPDATE] Controls Stack (Layers Menu) */}
+        <div className="absolute bottom-6 right-4 z-[1000] flex flex-col items-end gap-3 pointer-events-none">
+          {/* Layers Button */}
+          <div className="relative pointer-events-auto">
+            {isLayersOpen && (
+              <div className="absolute bottom-full right-0 mb-3 bg-white rounded-xl shadow-xl p-3 flex flex-col gap-2 w-56 animate-in fade-in slide-in-from-bottom-2 border border-gray-100">
+                {/* 1. Toggle Routes Switch */}
+                <div
+                  className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-50 rounded-lg"
+                  onClick={toggleRoutesVisibility}
+                >
+                  <span className="text-sm font-semibold text-gray-800">
+                    Show Routes
+                  </span>
+                  {/* Custom Toggle Switch UI */}
+                  <div
+                    className={`w-11 h-6 rounded-full transition-colors relative ${
+                      showRoutes ? "bg-blue-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${
+                        showRoutes ? "left-6" : "left-1"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="h-px bg-gray-100 my-1" />
+
+                {/* 2. Filter Options */}
+                <div
+                  className={`flex flex-col gap-1 transition-opacity duration-200 ${
+                    showRoutes
+                      ? "opacity-100"
+                      : "opacity-50 pointer-events-none"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">
+                    Filter Mode
+                  </span>
+
+                  <button
+                    onClick={() => {
+                      setFilterMode("all");
+                    }}
+                    className={`flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors text-left
+                      ${
+                        filterMode === "all"
+                          ? "bg-gray-100 font-medium text-gray-900"
+                          : "hover:bg-gray-50 text-gray-600"
+                      }`}
+                  >
+                    <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-gray-500" />
+                    </div>
+                    <span>All Modes</span>
+                    {filterMode === "all" && (
+                      <CheckCircle2
+                        size={16}
+                        className="ml-auto text-blue-600"
+                      />
+                    )}
+                  </button>
+
+                  {TRANSPORT_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => {
+                        setFilterMode(mode.id);
+                      }}
+                      className={`flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors text-left
+                        ${
+                          filterMode === mode.id
+                            ? "bg-gray-50 font-medium text-gray-900"
+                            : "hover:bg-gray-50 text-gray-600"
+                        }`}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center border border-gray-200"
+                        style={{ backgroundColor: `${mode.color}20` }} // 20% opacity bg
+                      >
+                        <div
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: mode.color }}
+                        />
+                      </div>
+                      <span className="truncate">{mode.label}</span>
+                      {filterMode === mode.id && (
+                        <CheckCircle2
+                          size={16}
+                          className="ml-auto text-blue-600"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Main Layers Button */}
             <button
-              onClick={toggleRoutesVisibility}
-              className="bg-white p-3 rounded-full shadow-lg"
-              title={showRoutes ? "ซ่อนเส้นทาง" : "แสดงเส้นทาง"}
+              onClick={() => setIsLayersOpen(!isLayersOpen)}
+              className={`
+                flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-all
+                ${
+                  isLayersOpen
+                    ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }
+              `}
             >
-              {showRoutes ? (
-                <Route className="h-6 w-6 text-blue-600" />
-              ) : (
-                <EyeOff className="h-6 w-6 text-blue-600" />
-              )}
+              <Layers size={24} />
             </button>
           </div>
-        )}
 
-        {/* ✅ WRAPPED IN CLUSTER GROUP */}
+          {/* Location Button */}
+          <LocationButton className="pointer-events-auto w-12 h-12 flex items-center justify-center" />
+        </div>
+
         <MarkerClusterGroup
           chunkedLoading
           iconCreateFunction={createClusterCustomIcon}
-          maxClusterRadius={40} // ระยะห่างในการรวมกลุ่ม
-          spiderfyOnMaxZoom={true} // แตกตัวเมื่อซูมสุด
+          maxClusterRadius={40}
+          spiderfyOnMaxZoom={true}
         >
-          {/* Static Data Markers */}
           {accessibleLocations.map((location) => (
             <LocationMarker key={location.id} location={location} />
           ))}
@@ -630,7 +695,6 @@ export function Map({
           ))}
         </MarkerClusterGroup>
 
-        {/* Search Result Marker */}
         {searchPosition && (
           <Marker
             position={searchPosition as L.LatLngExpression}
@@ -641,7 +705,6 @@ export function Map({
         )}
 
         <CurrentLocationMarker />
-        <LocationButton />
       </MapContainer>
     </div>
   );
