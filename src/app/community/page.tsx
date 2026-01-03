@@ -106,7 +106,8 @@ export default function CommunityPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Events State
-  const [joinedEvents, setJoinedEvents] = useState<number[]>([]);
+  // ✅ [UPDATE] เพิ่ม ID 1 เข้าไปเป็น Default เพื่อให้เห็นตัวอย่างกิจกรรมที่เข้าร่วม
+  const [joinedEvents, setJoinedEvents] = useState<number[]>([1]);
   const [eventFilter, setEventFilter] = useState<"all" | "my">("all");
 
   // --- Filter Logic ---
@@ -489,7 +490,6 @@ export default function CommunityPage() {
                     <p className="text-xs text-gray-500 line-clamp-1">
                       {club.description}
                     </p>
-                    {/* ✅ [REMOVED] เอาส่วนที่แสดง "สมาชิก" ออกตามที่แจ้งครับ */}
                   </div>
                   <div className="bg-gray-100 p-2 rounded-full text-gray-600">
                     <ChevronRight size={20} />
