@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import LayoutContent from "@/components/LayoutContent";
 import { LanguageProvider } from "../../contexts/LanguageContext";
-import { PrototypePopupProvider } from "@/components/PrototypePopupProvider";
+// import { PrototypePopupProvider } from "@/components/PrototypePopupProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { LoyaltyProvider } from "@/contexts/LoyaltyContext"; // ✅ เพิ่ม import
 
@@ -24,13 +24,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <LanguageProvider>
-          <PrototypePopupProvider>
-            {/* ✅ ครอบด้วย LoyaltyProvider ตรงนี้ */}
-            <LoyaltyProvider>
-              <LayoutContent>{children}</LayoutContent>
-            </LoyaltyProvider>
-            <Analytics />
-          </PrototypePopupProvider>
+          {/* <PrototypePopupProvider> */}
+          {/* ✅ ครอบด้วย LoyaltyProvider ตรงนี้ */}
+          <LoyaltyProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </LoyaltyProvider>
+          <Analytics />
+          {/* </PrototypePopupProvider> */}
         </LanguageProvider>
       </body>
     </html>
