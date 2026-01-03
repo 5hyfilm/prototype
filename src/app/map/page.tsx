@@ -29,7 +29,6 @@ export default function MapPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const CATEGORIES = [
-    { id: "all", label: t("common.all") || "ทั้งหมด", icon: "🌏" },
     { id: "Restaurant", label: "ร้านอาหาร", icon: "🍳" },
     { id: "Cafe", label: "คาเฟ่", icon: "☕" },
     { id: "Hotel", label: "ที่พัก", icon: "🛏️" },
