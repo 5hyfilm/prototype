@@ -1,7 +1,7 @@
 // src/app/community/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -14,6 +14,7 @@ import {
   UserPlus,
   Ticket,
   Calendar,
+  X,
 } from "lucide-react";
 import { CategoryTabs } from "@/components/CategoryTabs";
 import { PostCard } from "@/components/PostCard";
@@ -58,12 +59,35 @@ const mockClubs = [
     name: "Wheelchair Travelers TH",
     description: "กลุ่มคนชอบเที่ยว แลกเปลี่ยนเส้นทางทั่วไทย",
     members: 1250,
+    isJoined: true,
   },
   {
     id: 2,
     name: "Tech & Gadgets for All",
     description: "รีวิวอุปกรณ์และเทคโนโลยีช่วยเหลือ",
     members: 890,
+    isJoined: false,
+  },
+  {
+    id: 3,
+    name: "Accessible Cafes BKK",
+    description: "รวมคาเฟ่และร้านอาหารที่มีทางลาด",
+    members: 450,
+    isJoined: false,
+  },
+  {
+    id: 4,
+    name: "Pet Lovers Club",
+    description: "คนรักสัตว์เลี้ยงและสัตว์ช่วยเหลือ",
+    members: 300,
+    isJoined: true,
+  },
+  {
+    id: 5,
+    name: "Para Sports Thailand",
+    description: "รวมพลคนรักกีฬาวีลแชร์และพาราลิมปิก",
+    members: 620,
+    isJoined: false,
   },
 ];
 
@@ -76,16 +100,18 @@ export default function CommunityPage() {
     "feed"
   );
 
-  // Feed Filter State
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Events State
   const [joinedEvents, setJoinedEvents] = useState<number[]>([]);
-  // ✅ State สำหรับกรอง Event
   const [eventFilter, setEventFilter] = useState<"all" | "my">("all");
 
-  // Filter Logic สำหรับ Feed
+  // --- Filter Logic ---
+
+  // 1. Feed Logic
   const filteredPosts = samplePosts.filter(
     (post) =>
       (selectedCategory === "All" || post.category === selectedCategory) &&
@@ -93,13 +119,21 @@ export default function CommunityPage() {
         post.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Filter Logic สำหรับ Events
+  // 2. Events Logic
   const displayedEvents = mockEvents.filter((event) => {
-    if (eventFilter === "my") {
-      return joinedEvents.includes(event.id);
-    }
-    return true; // "all" case
+    if (eventFilter === "my") return joinedEvents.includes(event.id);
+    return true;
   });
+
+  // 3. Clubs Logic
+  const myClubs = mockClubs.filter((c) => c.isJoined);
+
+  // Search Results for Overlay
+  const searchResults = mockClubs.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // --- Handlers ---
 
   const handleCreateAction = () => {
     if (activeTab === "clubs") {
@@ -125,23 +159,117 @@ export default function CommunityPage() {
     return t("community.create.post") || "สร้างโพสต์";
   };
 
+  // Click outside to close search overlay
+  const searchRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        // Optional: setIsSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-gray-800">
       {/* === Header & Search === */}
       <div className="bg-white sticky top-0 z-20 shadow-sm px-4 pt-4 pb-2">
         <div className="flex items-center gap-3 mb-3">
-          <div className="flex-1 relative">
+          {/* Search Bar Container */}
+          <div className="flex-1 relative" ref={searchRef}>
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={18}
             />
             <input
               type="text"
-              placeholder={t("community.search.placeholder") || "ค้นหา..."}
-              className="w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={
+                activeTab === "clubs"
+                  ? "ค้นหาคลับใหม่ๆ..."
+                  : t("community.search.placeholder") || "ค้นหา..."
+              }
+              className="w-full bg-gray-100 rounded-full pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
             />
+
+            {(searchQuery || isSearchFocused) && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  if (activeTab === "clubs") setIsSearchFocused(false);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={14} />
+              </button>
+            )}
+
+            {/* Full Screen Search Overlay */}
+            {activeTab === "clubs" && isSearchFocused && (
+              <div className="fixed top-[68px] left-0 right-0 bottom-0 bg-white z-50 border-t border-gray-100 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="p-4 space-y-2 pb-24">
+                  <h3 className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">
+                    {searchQuery
+                      ? `ผลการค้นหา (${searchResults.length})`
+                      : "แนะนำสำหรับคุณ"}
+                  </h3>
+
+                  {searchResults.length > 0 ? (
+                    searchResults.map((club) => (
+                      <div
+                        key={club.id}
+                        onClick={() => {
+                          router.push(`/community/clubs/${club.id}`);
+                          setIsSearchFocused(false);
+                        }}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-50 last:border-0"
+                      >
+                        <div
+                          className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg ${
+                            club.isJoined
+                              ? "bg-gray-200 text-gray-600"
+                              : "bg-blue-100 text-blue-600"
+                          }`}
+                        >
+                          {club.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-base text-gray-900 truncate">
+                            {club.name}
+                          </h4>
+                          <p className="text-sm text-gray-500 truncate">
+                            {club.members.toLocaleString()} สมาชิก •{" "}
+                            {club.description}
+                          </p>
+                        </div>
+                        {club.isJoined ? (
+                          <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full whitespace-nowrap font-medium">
+                            สมาชิกแล้ว
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full whitespace-nowrap shadow-sm font-medium">
+                            + เข้าร่วม
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                      <div className="bg-gray-100 p-4 rounded-full mb-3">
+                        <Search size={32} className="text-gray-400" />
+                      </div>
+                      <p>ไม่พบคลับที่ค้นหา</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -213,7 +341,6 @@ export default function CommunityPage() {
         {/* Tab 2: Events */}
         {activeTab === "events" && (
           <div className="space-y-4">
-            {/* Event Filter Toggle */}
             <div className="flex justify-between items-center mb-2">
               <h2 className="font-bold text-lg flex items-center gap-2">
                 {eventFilter === "all" ? "กิจกรรมเร็วๆ นี้" : "กิจกรรมของฉัน"}
@@ -224,14 +351,13 @@ export default function CommunityPage() {
                 )}
               </h2>
 
-              {/* ✅ แก้ไข: ปุ่มเป็นสีน้ำเงินทั้งคู่เมื่อถูกเลือก (Active State) */}
               <div className="bg-gray-100 p-1 rounded-lg flex text-xs font-bold">
                 <button
                   onClick={() => setEventFilter("all")}
                   className={`px-3 py-1.5 rounded-md flex items-center gap-1 transition-all ${
                     eventFilter === "all"
-                      ? "bg-blue-600 text-white shadow-sm" // Active: สีน้ำเงิน
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-200" // Inactive
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <Calendar size={14} /> Explore
@@ -240,8 +366,8 @@ export default function CommunityPage() {
                   onClick={() => setEventFilter("my")}
                   className={`px-3 py-1.5 rounded-md flex items-center gap-1 transition-all ${
                     eventFilter === "my"
-                      ? "bg-blue-600 text-white shadow-sm" // Active: สีน้ำเงิน
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-200" // Inactive
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <Ticket size={14} /> My Events
@@ -249,7 +375,6 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            {/* Event List */}
             {displayedEvents.length > 0 ? (
               displayedEvents.map((event) => {
                 const isJoined = joinedEvents.includes(event.id);
@@ -290,7 +415,6 @@ export default function CommunityPage() {
                           </div>
                         </div>
                       </div>
-
                       <button
                         onClick={(e) => handleRSVP(event.id, e)}
                         className={`w-full mt-3 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
@@ -314,7 +438,6 @@ export default function CommunityPage() {
                 );
               })
             ) : (
-              // Empty State
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
                   {eventFilter === "my" ? (
@@ -328,19 +451,6 @@ export default function CommunityPage() {
                     ? "ยังไม่มีกิจกรรมที่เข้าร่วม"
                     : "ไม่พบกิจกรรม"}
                 </h3>
-                <p className="text-gray-500 text-sm mt-1">
-                  {eventFilter === "my"
-                    ? "ลองดูกิจกรรมที่น่าสนใจแล้วกดเข้าร่วมได้เลย!"
-                    : "ลองค้นหาใหม่อีกครั้ง"}
-                </p>
-                {eventFilter === "my" && (
-                  <button
-                    onClick={() => setEventFilter("all")}
-                    className="mt-4 text-blue-600 font-bold text-sm hover:underline"
-                  >
-                    ดูกิจกรรมทั้งหมด
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -364,29 +474,38 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            <h2 className="font-bold text-lg mb-2">แนะนำสำหรับคุณ</h2>
+            <h2 className="font-bold text-lg mb-2 text-gray-900">คลับของฉัน</h2>
 
-            {mockClubs.map((club) => (
-              <div
-                key={club.id}
-                onClick={() => router.push(`/community/clubs/${club.id}`)}
-                className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-all active:scale-[0.98]"
-              >
-                <div className="w-14 h-14 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden"></div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900">{club.name}</h3>
-                  <p className="text-xs text-gray-500 line-clamp-1">
-                    {club.description}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1 font-medium">
-                    {club.members.toLocaleString()} Members
-                  </p>
+            {myClubs.length > 0 ? (
+              myClubs.map((club) => (
+                <div
+                  key={club.id}
+                  onClick={() => router.push(`/community/clubs/${club.id}`)}
+                  className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-all active:scale-[0.98] mb-3"
+                >
+                  <div className="w-14 h-14 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden"></div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900">{club.name}</h3>
+                    <p className="text-xs text-gray-500 line-clamp-1">
+                      {club.description}
+                    </p>
+                    {/* ✅ [REMOVED] เอาส่วนที่แสดง "สมาชิก" ออกตามที่แจ้งครับ */}
+                  </div>
+                  <div className="bg-gray-100 p-2 rounded-full text-gray-600">
+                    <ChevronRight size={20} />
+                  </div>
                 </div>
-                <div className="bg-gray-100 p-2 rounded-full text-gray-600">
-                  <ChevronRight size={20} />
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 bg-white rounded-xl border border-dashed border-gray-300">
+                <p className="text-gray-500 mb-2">
+                  คุณยังไม่ได้เข้าร่วมคลับใดๆ
+                </p>
+                <p className="text-xs text-blue-600">
+                  ลองค้นหาคลับที่น่าสนใจที่แถบค้นหาด้านบน
+                </p>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
