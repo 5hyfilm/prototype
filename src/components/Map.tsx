@@ -421,15 +421,24 @@ export function Map({
   const { t } = useLanguage();
   const defaultPosition = L.latLng(13.7466, 100.5347); // Siam area
   const [position, setPosition] = useState(() => defaultPosition);
+
+  // ✅ [UPDATE] ใช้ Logic เลือกสีจาก TRANSPORT_MODES
   const [activeRoutes, setActiveRoutes] = useState(() =>
-    sampleRoutes.map((route) => ({
-      id: route.id,
-      accessibility: "high",
-      color: "#22c55e",
-      path: route.path,
-      name: route.title,
-      description: route.description,
-    }))
+    sampleRoutes.map((route) => {
+      // ค้นหา Mode ที่ตรงกันจาก id
+      const mode = TRANSPORT_MODES.find((m) => m.id === route.transportMode);
+      // ถ้าไม่เจอ ให้ใช้สีเขียวเป็นค่าเริ่มต้น
+      const color = mode ? mode.color : "#22c55e";
+
+      return {
+        id: route.id,
+        accessibility: "high",
+        color: color,
+        path: route.path,
+        name: route.title,
+        description: route.description,
+      };
+    })
   );
 
   const [searchValue, setSearchValue] = useState("");
