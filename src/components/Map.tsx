@@ -500,6 +500,7 @@ export function Map({
       <MapContainer
         center={position}
         zoom={16}
+        zoomControl={false}
         className="w-full h-full"
         style={{ height: "100%", width: "100%" }}
       >
